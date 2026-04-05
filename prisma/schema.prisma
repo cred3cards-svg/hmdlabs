@@ -1,0 +1,772 @@
+// prisma/schema.prisma
+// HMD Labs – West Bengal | NABL Accredited | 24×7 Operations
+// Production schema v1.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator nextAdmin {
+  provider = "next-admin-generator-prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  PATIENT
+  DOCTOR
+  FRANCHISE_PARTNER
+  LAB_STAFF
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SAMPLE_COLLECTED
+  IN_TRANSIT
+  PROCESSING
+  REPORT_READY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIAL
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  NET_BANKING
+  WALLET
+  INSURANCE
+  CORPORATE_CREDIT
+}
+
+enum SampleTrackingStatus {
+  BOOKED
+  PHLEBOTOMIST_ASSIGNED
+  SAMPLE_COLLECTED
+  SAMPLE_DISPATCHED
+  RECEIVED_AT_LAB
+  PROCESSING_STARTED
+  ANALYSIS_COMPLETE
+  REPORT_GENERATED
+  REPORT_DISPATCHED
+  DELIVERED
+}
+
+enum FranchiseLeadStatus {
+  NEW
+  CONTACTED
+  DEMO_SCHEDULED
+  DEMO_DONE
+  PROPOSAL_SENT
+  NEGOTIATION
+  AGREEMENT_SIGNED
+  ONBOARDING
+  LIVE
+  LOST
+  DISQUALIFIED
+}
+
+enum FranchiseLeadScore {
+  HOT
+  WARM
+  COLD
+}
+
+enum FranchiseType {
+  COLLECTION_CENTER
+  MINI_LAB
+  FULL_LAB
+  MOBILE_UNIT
+}
+
+enum DoctorLeadStatus {
+  NEW
+  CONTACTED
+  ENROLLED
+  ACTIVE
+  INACTIVE
+  CHURNED
+}
+
+enum CorporateLeadStatus {
+  NEW
+  PROPOSAL_SENT
+  NEGOTIATION
+  AGREEMENT
+  ACTIVE
+  RENEWAL_DUE
+  INACTIVE
+}
+
+enum WBDistrict {
+  ALIPURDUAR
+  BANKURA
+  BIRBHUM
+  COOCH_BEHAR
+  DAKSHIN_DINAJPUR
+  DARJEELING
+  HOOGHLY
+  HOWRAH
+  JALPAIGURI
+  JHARGRAM
+  KALIMPONG
+  KOLKATA
+  MALDA
+  MURSHIDABAD
+  NADIA
+  NORTH_24_PARGANAS
+  PASCHIM_BARDHAMAN
+  PASCHIM_MEDINIPUR
+  PURBA_BARDHAMAN
+  PURBA_MEDINIPUR
+  PURULIA
+  SOUTH_24_PARGANAS
+  UTTAR_DINAJPUR
+}
+
+enum ReportFormat {
+  PDF
+  HTML
+  BOTH
+}
+
+enum KnowledgeHubCategory {
+  HEALTH_TIPS
+  TEST_GUIDE
+  DISEASE_INFO
+  NUTRITION
+  PREVENTIVE_CARE
+  LAB_SCIENCE
+  NEWS_UPDATES
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USERS & AUTH
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  phone           String?   @unique
+  email           String?   @unique
+  name            String?
+  passwordHash    String?
+  role            UserRole  @default(PATIENT)
+  gender          Gender?
+  dateOfBirth     DateTime?
+  profileImageUrl String?
+  isVerified      Boolean   @default(false)
+  isActive        Boolean   @default(true)
+
+  // West Bengal address
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  district     WBDistrict?
+  pincode      String?
+  state        String      @default("West Bengal")
+
+  // Relations
+  orders         Order[]
+  reports        Report[]
+  otpTokens      OTPToken[]
+  prescriptions  Prescription[]
+  accounts       Account[]
+  sessions       Session[]
+  familyMembers  FamilyMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model FamilyMember {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  gender      Gender?
+  dateOfBirth DateTime?
+  relation    String
+  orders      Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("family_members")
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model OTPToken {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  phone     String?
+  email     String?
+  otp       String
+  purpose   String   // "login" | "report" | "brochure" | "prescription"
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@map("otp_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LAB INFRASTRUCTURE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Lab {
+  id          String     @id @default(cuid())
+  name        String
+  code        String     @unique
+  type        String     // "MAIN_LAB" | "COLLECTION_CENTER" | "FRANCHISE"
+  isNABL      Boolean    @default(false)
+  nabLicence  String?
+  is24x7      Boolean    @default(false)
+
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  district     WBDistrict
+  pincode      String
+  state        String    @default("West Bengal")
+  latitude     Float?
+  longitude    Float?
+
+  phone    String
+  email    String?
+  mapUrl   String?
+  imageUrl String?
+
+  operatingHours Json? // { mon: "6am-10pm", ... }
+  services       String[] // list of services offered
+
+  isActive Boolean @default(true)
+
+  orders         Order[]
+  sampleEvents   SampleTrackingEvent[]
+  franchiseLeads FranchiseLead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("labs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TESTS & PACKAGES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model TestCategory {
+  id       String @id @default(cuid())
+  name     String @unique
+  slug     String @unique
+  icon     String?
+  sortOrder Int   @default(0)
+  isActive Boolean @default(true)
+  tests    Test[]
+
+  @@map("test_categories")
+}
+
+model Test {
+  id              String       @id @default(cuid())
+  name            String
+  slug            String       @unique
+  code            String       @unique // e.g. "CBC", "LFT", "TFT"
+  categoryId      String
+  category        TestCategory @relation(fields: [categoryId], references: [id])
+  description     String?      @db.Text
+  preparation     String?      @db.Text // fasting instructions etc.
+  sampleType      String       // "Blood" | "Urine" | "Stool" etc.
+  turnaroundTime  Int          // hours
+  mrpPrice        Float
+  discountedPrice Float
+  homeSampleFee   Float        @default(0)
+  reportFormat    ReportFormat @default(PDF)
+  isPopular       Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  nabAccredited   Boolean      @default(true)
+  tags            String[]
+
+  packageTests PackageTest[]
+  orderItems   OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tests")
+}
+
+model Package {
+  id              String  @id @default(cuid())
+  name            String
+  slug            String  @unique
+  shortName       String?
+  description     String? @db.Text
+  targetGroup     String? // "Male 30+", "Diabetic", "Corporate" etc.
+  mrpPrice        Float
+  discountedPrice Float
+  homeSampleFee   Float   @default(0)
+  imageUrl        String?
+  isPopular       Boolean @default(false)
+  isFeatured      Boolean @default(false)
+  isActive        Boolean @default(true)
+  sortOrder       Int     @default(0)
+  tags            String[]
+  reportFormat    ReportFormat @default(PDF)
+
+  tests      PackageTest[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("packages")
+}
+
+model PackageTest {
+  id        String  @id @default(cuid())
+  packageId String
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  testId    String
+  test      Test    @relation(fields: [testId], references: [id])
+
+  @@unique([packageId, testId])
+  @@map("package_tests")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  familyMemberId  String?
+  familyMember    FamilyMember? @relation(fields: [familyMemberId], references: [id])
+  labId           String?
+  lab             Lab?          @relation(fields: [labId], references: [id])
+
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod PaymentMethod?
+  paymentRef    String?
+
+  isHomeCollection Boolean   @default(false)
+  scheduledDate    DateTime?
+  scheduledSlot    String?   // "6-8am", "8-10am" etc.
+
+  subtotal   Float
+  discount   Float   @default(0)
+  homeFee    Float   @default(0)
+  totalAmount Float
+
+  // Patient address for home collection (WB specific)
+  collectionAddress String?
+  collectionCity    String?
+  collectionDistrict WBDistrict?
+  collectionPincode String?
+
+  prescriptionId String?
+  prescription   Prescription? @relation(fields: [prescriptionId], references: [id])
+
+  notes          String?
+  internalNotes  String?
+
+  items          OrderItem[]
+  sampleEvents   SampleTrackingEvent[]
+  reports        Report[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  testId    String?
+  test      Test?   @relation(fields: [testId], references: [id])
+  packageId String?
+  package   Package? @relation(fields: [packageId], references: [id])
+
+  name     String
+  price    Float
+  quantity Int   @default(1)
+
+  @@map("order_items")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SAMPLE TRACKING
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SampleTrackingEvent {
+  id          String               @id @default(cuid())
+  orderId     String
+  order       Order                @relation(fields: [orderId], references: [id])
+  labId       String?
+  lab         Lab?                 @relation(fields: [labId], references: [id])
+  status      SampleTrackingStatus
+  description String
+  staffName   String?
+  staffPhone  String?
+  latitude    Float?
+  longitude   Float?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@map("sample_tracking_events")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REPORTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Report {
+  id          String @id @default(cuid())
+  orderId     String
+  order       Order  @relation(fields: [orderId], references: [id])
+  userId      String
+  user        User   @relation(fields: [userId], references: [id])
+
+  reportNumber  String @unique
+  fileUrl       String // S3 pre-signed URL or path
+  format        ReportFormat @default(PDF)
+  isVerified    Boolean      @default(false) // doctor verified
+  generatedAt   DateTime     @default(now())
+
+  // OTP download protection
+  downloadCount Int      @default(0)
+  lastDownloadAt DateTime?
+
+  // Lab metadata
+  labTechnicianName String?
+  labTechnicianId   String?
+  authorizedByName  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reports")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRESCRIPTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Prescription {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  fileUrl    String
+  fileName   String
+  mimeType   String
+  uploadedAt DateTime @default(now())
+  notes      String?
+
+  orders Order[]
+
+  @@map("prescriptions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FRANCHISE LEADS – CRM-READY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model FranchiseLead {
+  id String @id @default(cuid())
+
+  // Personal details
+  applicantName  String
+  phone          String
+  email          String
+  alternatePhone String?
+  photo          String?
+
+  // Business intent
+  franchiseType     FranchiseType
+  preferredDistrict WBDistrict
+  preferredCity     String
+  investmentCapacity Float?       // INR
+  existingSpace     Boolean       @default(false)
+  spaceArea         Float?        // sq.ft
+  currentOccupation String?
+  businessExperience Int?         // years
+
+  // Current address
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  district     WBDistrict?
+  pincode      String?
+
+  // CRM fields
+  status    FranchiseLeadStatus @default(NEW)
+  score     FranchiseLeadScore  @default(COLD)
+  leadScore Int                 @default(0) // calculated numeric score 0-100
+  source    String?             // "website", "referral", "campaign" etc.
+  campaign  String?
+  utmParams Json?
+
+  // CRM activity
+  assignedToId   String?
+  assignedToName String?
+  lastContactedAt DateTime?
+  nextFollowUpAt  DateTime?
+  notes          String?   @db.Text
+  internalNotes  String?   @db.Text
+
+  // Consent
+  termsAccepted   Boolean  @default(false)
+  termsAcceptedAt DateTime?
+  brochureOtpSent Boolean  @default(false)
+  brochureDownloaded Boolean @default(false)
+
+  // Related lab (if already assigned)
+  labId String?
+  lab   Lab?    @relation(fields: [labId], references: [id])
+
+  activities FranchiseActivity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("franchise_leads")
+}
+
+model FranchiseActivity {
+  id          String        @id @default(cuid())
+  leadId      String
+  lead        FranchiseLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type        String        // "call", "email", "visit", "demo", "note", "status_change"
+  description String        @db.Text
+  staffName   String?
+  outcome     String?
+
+  createdAt DateTime @default(now())
+
+  @@map("franchise_activities")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOCTOR & CLINIC LEADS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model DoctorLead {
+  id String @id @default(cuid())
+
+  name           String
+  phone          String
+  email          String?
+  qualification  String?
+  specialisation String?
+  registrationNo String?
+
+  clinicName    String?
+  clinicAddress String?
+  city          String?
+  district      WBDistrict?
+  pincode       String?
+
+  referralCommissionPct Float?   @default(0)
+  preferredPickupSlot   String?
+
+  status     DoctorLeadStatus @default(NEW)
+  source     String?
+  notes      String?   @db.Text
+  assignedTo String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("doctor_leads")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CORPORATE LEADS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model CorporateLead {
+  id String @id @default(cuid())
+
+  companyName    String
+  contactName    String
+  designation    String?
+  phone          String
+  email          String
+  employeeCount  Int?
+  industry       String?
+  gstNumber      String?
+
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  district     WBDistrict?
+  pincode      String?
+
+  servicesRequired String[]   // ["Health Checkup", "OPD", "Covid", ...]
+  annualBudget     Float?
+
+  status         CorporateLeadStatus @default(NEW)
+  source         String?
+  notes          String?             @db.Text
+  assignedTo     String?
+  contractValue  Float?
+  contractExpiry DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("corporate_leads")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KNOWLEDGE HUB (Blog/Articles)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model KnowledgeHubArticle {
+  id         String               @id @default(cuid())
+  title      String
+  slug       String               @unique
+  excerpt    String?
+  content    String               @db.Text
+  category   KnowledgeHubCategory
+  tags       String[]
+  imageUrl   String?
+  authorName String               @default("HMD Labs Editorial Team")
+  isPublished Boolean             @default(false)
+  publishedAt DateTime?
+  viewCount   Int                 @default(0)
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("knowledge_hub_articles")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MISC
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Testimonial {
+  id         String  @id @default(cuid())
+  name       String
+  city       String
+  district   WBDistrict?
+  rating     Int     @default(5)
+  text       String  @db.Text
+  imageUrl   String?
+  isVerified Boolean @default(false)
+  isActive   Boolean @default(true)
+  sortOrder  Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@map("testimonials")
+}
+
+model Banner {
+  id         String   @id @default(cuid())
+  title      String
+  subtitle   String?
+  imageUrl   String
+  mobileImageUrl String?
+  ctaText    String?
+  ctaUrl     String?
+  position   String   @default("HOME_HERO")
+  isActive   Boolean  @default(true)
+  startDate  DateTime?
+  endDate    DateTime?
+  sortOrder  Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@map("banners")
+}
+
+model ContactInquiry {
+  id      String @id @default(cuid())
+  name    String
+  phone   String
+  email   String?
+  subject String?
+  message String @db.Text
+  type    String @default("GENERAL") // GENERAL | CORPORATE | MEDIA | GRIEVANCE
+  status  String @default("NEW")
+  notes   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contact_inquiries")
+}
