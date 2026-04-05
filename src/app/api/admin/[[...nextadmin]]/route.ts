@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { createHandler } from "@premieroctet/next-admin/appHandler";
 import prisma from "@/lib/prisma";
 
