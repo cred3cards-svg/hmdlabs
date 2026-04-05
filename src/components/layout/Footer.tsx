@@ -6,7 +6,7 @@ const FOOTER_LINKS = {
     { label: "Book a Test", href: "/book-test" },
     { label: "Health Packages", href: "/health-packages" },
     { label: "Upload Prescription", href: "/upload-prescription" },
-    { label: "Download Report", href: "/download-report" },
+    // { label: "Download Report", href: "/download-report" },
     { label: "Track Your Sample", href: "/track-sample" },
     { label: "Find a Lab", href: "/lab-locator" },
   ],

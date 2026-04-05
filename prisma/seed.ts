@@ -2,13 +2,31 @@
 // Demo seed data for HMD Labs – West Bengal
 // Run: npm run db:seed
 
-import { PrismaClient, WBDistrict, FranchiseType } from "@prisma/client";
+import { PrismaClient, WBDistrict, FranchiseType, UserRole } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import { calculateFranchiseLeadScore, getLeadScoreLabel } from "../src/lib/utils";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Seeding HMD Labs database...");
+
+  // ── Super Admin ────────────────────────────────────────────────────────
+  const adminPasswordHash = await bcrypt.hash("admin123", 10);
+  await prisma.user.upsert({
+    where: { email: "admin@hmdlabs.in" },
+    update: {
+      passwordHash: adminPasswordHash,
+      role: UserRole.SUPER_ADMIN,
+    },
+    create: {
+      email: "admin@hmdlabs.in",
+      name: "HMD Super Admin",
+      passwordHash: adminPasswordHash,
+      role: UserRole.SUPER_ADMIN,
+    },
+  });
+  console.log("✅ Super Admin user created (admin@hmdlabs.in)");
 
   // ── Test Categories ──────────────────────────────────────────────────────
   const categories = await Promise.all([
