@@ -87,9 +87,9 @@ export default function Footer() {
 
             {/* Contact info */}
             <div className="space-y-2.5 text-sm">
-              <a href="tel:03312345678" className="flex items-center gap-2.5 text-gray-400 hover:text-white transition-colors">
+              <a href="tel:7980701285" className="flex items-center gap-2.5 text-gray-400 hover:text-white transition-colors">
                 <Phone className="h-4 w-4 text-brand-400 shrink-0" />
-                +91 33 1234-5678
+                +91 79807 01285
               </a>
               <a href="mailto:support@hmdlabs.in" className="flex items-center gap-2.5 text-gray-400 hover:text-white transition-colors">
                 <Mail className="h-4 w-4 text-brand-400 shrink-0" />
@@ -97,7 +97,7 @@ export default function Footer() {
               </a>
               <div className="flex items-start gap-2.5 text-gray-400">
                 <MapPin className="h-4 w-4 text-brand-400 shrink-0 mt-0.5" />
-                <span>123, Science City Road, Kolkata – 700046, West Bengal, India</span>
+                <span>Health Max Diagnostic Pvt. Ltd., 3, Chowringhee Terrace, Gokhale Road, Kolkata, West Bengal - 700020, India</span>
               </div>
             </div>
 

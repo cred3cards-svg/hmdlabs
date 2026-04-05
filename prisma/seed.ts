@@ -1,12 +1,41 @@
 // prisma/seed.ts
-// Demo seed data for HMD Labs – West Bengal
-// Run: npm run db:seed
-
-import { PrismaClient, WBDistrict, FranchiseType, UserRole } from "@prisma/client";
+import { PrismaClient, WBDistrict, FranchiseType, UserRole, ReportFormat } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { calculateFranchiseLeadScore, getLeadScoreLabel } from "../src/lib/utils";
 
 const prisma = new PrismaClient();
+
+const POPULAR_TESTS = [
+  { name: "Complete Blood Count (CBC)", code: "CBC", mrp: 400, price: 249, tat: 6, sample: "Blood", category: "Haematology" },
+  { name: "Liver Function Test (LFT)", code: "LFT", mrp: 650, price: 449, tat: 8, sample: "Blood", category: "Biochemistry" },
+  { name: "Kidney Function Test (KFT)", code: "KFT", mrp: 750, price: 499, tat: 8, sample: "Blood", category: "Biochemistry" },
+  { name: "Thyroid Profile (T3/T4/TSH)", code: "TFT", mrp: 900, price: 599, tat: 12, sample: "Blood", category: "Endocrinology" },
+  { name: "HbA1c (Glycated Haemoglobin)", code: "HBA1C", mrp: 600, price: 399, tat: 6, sample: "Blood", category: "Diabetes" },
+  { name: "Lipid Profile", code: "LIPID", mrp: 700, price: 449, tat: 8, sample: "Blood", category: "Cardiology" },
+  { name: "Vitamin D (25-OH)", code: "VITD", mrp: 1400, price: 799, tat: 24, sample: "Blood", category: "Vitamins" },
+  { name: "Vitamin B12", code: "VITB12", mrp: 1200, price: 699, tat: 24, sample: "Blood", category: "Vitamins" },
+];
+
+const PACKAGES = [
+  { name: "Basic Health Screen", slug: "basic-health", targetGroup: "All Adults", mrp: 1800, price: 999, tests: ["CBC", "Blood Sugar (F)", "Urine Routine", "LFT", "KFT", "Lipid Profile"], description: "Essential health markers for a quick annual snapshot.", featured: false, popular: false },
+  { name: "Aarogya Premium 50+", slug: "aarogya-premium", targetGroup: "Adults 30+", mrp: 4500, price: 2499, tests: ["CBC", "ESR", "Blood Sugar (F&PP)", "HbA1c", "LFT", "KFT", "Lipid Profile", "Thyroid (T3/T4/TSH)", "Urine Routine", "Vitamin D", "Vitamin B12"], description: "Comprehensive wellness panel for the health-conscious adult.", featured: true, popular: true },
+  { name: "Diabetes Care", slug: "diabetes-care", targetGroup: "Diabetics", mrp: 3200, price: 1799, tests: ["HbA1c", "Blood Sugar (F&PP)", "Microalbumin", "KFT", "Lipid Profile", "CBC", "Urine Routine"], description: "Designed for diabetics to track glycaemic control and organ health.", featured: false, popular: false },
+  { name: "Cardiac Risk Panel", slug: "heart-health", targetGroup: "Cardiac Risk", mrp: 3800, price: 1999, tests: ["Lipid Profile (Detailed)", "hs-CRP", "Homocysteine", "Troponin-I", "CBC", "Blood Sugar"], description: "Advanced cardiac risk assessment for high-risk individuals.", featured: false, popular: false },
+  { name: "Women's Wellness", slug: "womens-wellness", targetGroup: "Women 18–60", mrp: 5500, price: 2999, tests: ["CBC", "Thyroid (T3/T4/TSH)", "Vitamin D", "Vitamin B12", "Iron Studies", "Calcium", "Blood Sugar", "Hormone Panel"], description: "Comprehensive screening tailored for women's unique health needs.", featured: false, popular: false },
+  { name: "Senior Citizen Panel", slug: "senior-citizen", targetGroup: "Age 60+", mrp: 6000, price: 3499, tests: ["CBC", "ESR", "LFT", "KFT", "Thyroid", "HbA1c", "Lipid Profile", "Vitamin D", "Vitamin B12", "PSA (Male)", "Urine Routine"], description: "Age-appropriate comprehensive panel for elderly patients.", featured: false, popular: false },
+  { name: "Corporate Wellness", slug: "corporate-wellness", targetGroup: "Working Adults", mrp: 2800, price: 1499, tests: ["CBC", "Blood Sugar (F)", "Lipid Profile", "LFT", "Urine Routine", "ECG Interpretation"], description: "Efficient workplace health screening package. Bulk rates available.", featured: false, popular: false },
+  { name: "Thyroid + Hormone Panel", slug: "thyroid-hormone", targetGroup: "Women & Thyroid Patients", mrp: 2800, price: 1599, tests: ["T3", "T4", "TSH", "Anti-TPO", "Anti-TG", "LH", "FSH", "Prolactin", "Estradiol"], description: "Detailed thyroid and hormonal profile for diagnosis and monitoring.", featured: false, popular: false },
+];
+
+const TESTIMONIALS = [
+  { name: "Subrata Chakraborty", city: "Howrah", rating: 5, text: "Got my cardiac panel done at HMD Labs Howrah. Results were ready in 6 hours. Doctors at SSKM appreciated the quality of the report. Truly world-class!" },
+  { name: "Priyanka Mondal", city: "Nadia", rating: 5, text: "Home collection at 6am, report by afternoon. The phlebotomist was professional and the WhatsApp OTP download was seamless. Highly recommended." },
+  { name: "Dr. Arun Ghosh", city: "Kolkata (Medical)", rating: 5, text: "As a physician, I insist on NABL-certified results. HMD Labs' accuracy and turnaround time are exceptional. I refer all my patients here." },
+  { name: "Mahua Banerjee", city: "Durgapur", rating: 5, text: "Diabetes care package covered everything my diabetologist asked for. The printed report was beautifully formatted and the interpretation guide was helpful." },
+  { name: "Rajib Das", city: "Siliguri", rating: 5, text: "Even in Siliguri, HMD Labs has great coverage. The franchise center here is well-equipped. I'm glad WB finally has a truly pan-state lab brand." },
+  { name: "Sumitra Roy", city: "Midnapore", rating: 5, text: "My elderly mother needed senior citizen panel done at home. The team was so gentle and caring. Reports came on time. Five stars without hesitation." },
+];
+
 
 async function main() {
   console.log("🌱 Seeding HMD Labs database...");
@@ -28,346 +57,128 @@ async function main() {
   });
   console.log("✅ Super Admin user created (admin@hmdlabs.in)");
 
-  // ── Test Categories ──────────────────────────────────────────────────────
-  const categories = await Promise.all([
-    prisma.testCategory.upsert({
-      where: { slug: "haematology" },
-      update: {},
-      create: { name: "Haematology", slug: "haematology", icon: "🩸", sortOrder: 1 },
-    }),
-    prisma.testCategory.upsert({
-      where: { slug: "biochemistry" },
-      update: {},
-      create: { name: "Biochemistry", slug: "biochemistry", icon: "🧪", sortOrder: 2 },
-    }),
-    prisma.testCategory.upsert({
-      where: { slug: "endocrinology" },
-      update: {},
-      create: { name: "Endocrinology", slug: "endocrinology", icon: "⚗️", sortOrder: 3 },
-    }),
-    prisma.testCategory.upsert({
-      where: { slug: "diabetes" },
-      update: {},
-      create: { name: "Diabetes", slug: "diabetes", icon: "💉", sortOrder: 4 },
-    }),
-    prisma.testCategory.upsert({
-      where: { slug: "vitamins" },
-      update: {},
-      create: { name: "Vitamins & Minerals", slug: "vitamins", icon: "💊", sortOrder: 5 },
-    }),
-  ]);
+  // ── Categories ────────────────────────────────────────────────────────
+  const uniqueCategories = Array.from(new Set(POPULAR_TESTS.map(t => t.category)));
+  for (const catName of uniqueCategories) {
+    const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    await prisma.testCategory.upsert({
+      where: { slug: slug },
+      update: { name: catName },
+      create: { name: catName, slug: slug },
+    });
+  }
 
-  console.log(`✅ ${categories.length} test categories created`);
+  // ── Tests ────────────────────────────────────────────────────────
+  for (const t of POPULAR_TESTS) {
+    const category = await prisma.testCategory.findUnique({ where: { name: t.category } });
+    if (!category) continue;
+    
+    await prisma.test.upsert({
+      where: { code: t.code },
+      update: {
+        name: t.name,
+        mrpPrice: t.mrp,
+        discountedPrice: t.price,
+        isPopular: true
+      },
+      create: {
+        name: t.name,
+        slug: t.code.toLowerCase(),
+        code: t.code,
+        categoryId: category.id,
+        sampleType: t.sample,
+        turnaroundTime: t.tat,
+        mrpPrice: t.mrp,
+        discountedPrice: t.price,
+        isPopular: true
+      }
+    });
+  }
+  console.log(`✅ ${POPULAR_TESTS.length} popular tests seeded.`);
 
-  // ── Tests ────────────────────────────────────────────────────────────────
-  const tests = await Promise.all([
-    prisma.test.upsert({
-      where: { code: "CBC" },
+  // Custom package tests that aren't in popular tests array
+  const packageExtraTests = Array.from(new Set(PACKAGES.flatMap(p => p.tests)));
+  const baseCategory = await prisma.testCategory.findFirst();
+  for (const extra of packageExtraTests) {
+    const code = extra.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    await prisma.test.upsert({
+      where: { code: code },
       update: {},
       create: {
-        name: "Complete Blood Count (CBC)",
-        slug: "complete-blood-count-cbc",
-        code: "CBC",
-        categoryId: categories[0].id,
-        description: "CBC measures components and features of blood including red cells, white cells, platelets.",
-        preparation: "No special preparation needed.",
-        sampleType: "Blood",
-        turnaroundTime: 6,
-        mrpPrice: 400,
-        discountedPrice: 249,
-        homeSampleFee: 50,
-        isPopular: true,
-        nabAccredited: true,
-        tags: ["blood", "anaemia", "infection", "haemoglobin"],
-      },
-    }),
-    prisma.test.upsert({
-      where: { code: "LFT" },
-      update: {},
-      create: {
-        name: "Liver Function Test (LFT)",
-        slug: "liver-function-test-lft",
-        code: "LFT",
-        categoryId: categories[1].id,
-        description: "Measures liver enzymes, proteins and bilirubin to assess liver health.",
-        preparation: "8-10 hours fasting required.",
-        sampleType: "Blood",
-        turnaroundTime: 8,
-        mrpPrice: 650,
-        discountedPrice: 449,
-        homeSampleFee: 50,
-        isPopular: true,
-        nabAccredited: true,
-        tags: ["liver", "jaundice", "fatty liver", "enzymes"],
-      },
-    }),
-    prisma.test.upsert({
-      where: { code: "TFT" },
-      update: {},
-      create: {
-        name: "Thyroid Profile (T3 T4 TSH)",
-        slug: "thyroid-profile-t3-t4-tsh",
-        code: "TFT",
-        categoryId: categories[2].id,
-        description: "Complete thyroid panel to diagnose hypothyroidism, hyperthyroidism.",
-        preparation: "No fasting required. Avoid biotin supplements 2 days prior.",
+        name: extra,
+        slug: code.toLowerCase() + '-' + Date.now().toString().slice(-4),
+        code: code,
+        categoryId: baseCategory!.id,
         sampleType: "Blood",
         turnaroundTime: 12,
-        mrpPrice: 900,
-        discountedPrice: 599,
-        homeSampleFee: 50,
-        isPopular: true,
-        nabAccredited: true,
-        tags: ["thyroid", "TSH", "T3", "T4", "hypothyroidism"],
+        mrpPrice: 500,
+        discountedPrice: 300,
+        isPopular: false
+      }
+    });
+  }
+
+  // ── Packages ────────────────────────────────────────────────────────
+  for (const pkg of PACKAGES) {
+    const createdPkg = await prisma.package.upsert({
+      where: { slug: pkg.slug },
+      update: {
+        name: pkg.name,
+        targetGroup: pkg.targetGroup,
+        mrpPrice: pkg.mrp,
+        discountedPrice: pkg.price,
+        description: pkg.description,
+        isFeatured: pkg.featured,
+        isPopular: pkg.popular,
       },
-    }),
-    prisma.test.upsert({
-      where: { code: "HBA1C" },
-      update: {},
       create: {
-        name: "HbA1c (Glycated Haemoglobin)",
-        slug: "hba1c-glycated-haemoglobin",
-        code: "HBA1C",
-        categoryId: categories[3].id,
-        description: "Reflects average blood glucose over the past 3 months.",
-        preparation: "No fasting required.",
-        sampleType: "Blood",
-        turnaroundTime: 6,
-        mrpPrice: 600,
-        discountedPrice: 399,
-        homeSampleFee: 50,
-        isPopular: true,
-        nabAccredited: true,
-        tags: ["diabetes", "HbA1c", "blood sugar", "glucose"],
-      },
-    }),
-    prisma.test.upsert({
-      where: { code: "VITD" },
-      update: {},
-      create: {
-        name: "Vitamin D (25-Hydroxy)",
-        slug: "vitamin-d-25-hydroxy",
-        code: "VITD",
-        categoryId: categories[4].id,
-        description: "Measures 25-hydroxyvitamin D levels in blood.",
-        preparation: "No special preparation.",
-        sampleType: "Blood",
-        turnaroundTime: 24,
-        mrpPrice: 1400,
-        discountedPrice: 799,
-        homeSampleFee: 50,
-        isPopular: true,
-        nabAccredited: true,
-        tags: ["vitamin D", "deficiency", "bones", "immunity"],
-      },
-    }),
-  ]);
+        name: pkg.name,
+        slug: pkg.slug,
+        targetGroup: pkg.targetGroup,
+        mrpPrice: pkg.mrp,
+        discountedPrice: pkg.price,
+        description: pkg.description,
+        isFeatured: pkg.featured,
+        isPopular: pkg.popular,
+      }
+    });
 
-  console.log(`✅ ${tests.length} tests created`);
+    // Link tests
+    for (const testName of pkg.tests) {
+      const code = testName.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const dbTest = await prisma.test.findUnique({ where: { code } });
+      if (dbTest) {
+        await prisma.packageTest.upsert({
+          where: { packageId_testId: { packageId: createdPkg.id, testId: dbTest.id } },
+          update: {},
+          create: { packageId: createdPkg.id, testId: dbTest.id }
+        });
+      }
+    }
+  }
+  console.log(`✅ ${PACKAGES.length} packages seeded and linked.`);
 
-  // ── Labs ─────────────────────────────────────────────────────────────────
-  const kolkataLab = await prisma.lab.upsert({
-    where: { code: "KOL-MAIN" },
-    update: {},
-    create: {
-      name: "HMD Labs – Kolkata Main Lab",
-      code: "KOL-MAIN",
-      type: "MAIN_LAB",
-      isNABL: true,
-      nabLicence: "MC-4521",
-      is24x7: true,
-      addressLine1: "12 Science City Road, Sector V",
-      city: "Kolkata",
-      district: WBDistrict.KOLKATA,
-      pincode: "700091",
-      state: "West Bengal",
-      phone: "033-1234-5678",
-      email: "kolkata@hmdlabs.in",
-      latitude: 22.5726,
-      longitude: 88.3639,
-      services: ["Blood", "Urine", "Stool", "Microbiology", "Histopathology", "Radiology"],
-    },
-  });
-
-  const howrahLab = await prisma.lab.upsert({
-    where: { code: "HWR-01" },
-    update: {},
-    create: {
-      name: "HMD Labs – Howrah Collection Center",
-      code: "HWR-01",
-      type: "COLLECTION_CENTER",
-      isNABL: true,
-      is24x7: false,
-      addressLine1: "45 GT Road, Shibpur",
-      city: "Howrah",
-      district: WBDistrict.HOWRAH,
-      pincode: "711102",
-      state: "West Bengal",
-      phone: "033-2345-6789",
-      services: ["Blood", "Urine", "Stool"],
-      operatingHours: {
-        mon: "6:00 AM – 10:00 PM",
-        tue: "6:00 AM – 10:00 PM",
-        wed: "6:00 AM – 10:00 PM",
-        thu: "6:00 AM – 10:00 PM",
-        fri: "6:00 AM – 10:00 PM",
-        sat: "6:00 AM – 10:00 PM",
-        sun: "7:00 AM – 8:00 PM",
-      },
-    },
-  });
-
-  console.log(`✅ ${2} labs created`);
-
-  // ── Packages ─────────────────────────────────────────────────────────────
-  const healthPackage = await prisma.package.upsert({
-    where: { slug: "full-body-checkup-wb" },
-    update: {},
-    create: {
-      name: "Full Body Health Checkup – West Bengal Special",
-      slug: "full-body-checkup-wb",
-      shortName: "Full Body",
-      description: "Comprehensive 82-parameter health checkup specially designed for West Bengal patients. Covers all vital organ functions.",
-      targetGroup: "Adults 18+",
-      mrpPrice: 4500,
-      discountedPrice: 1499,
-      homeSampleFee: 0,
-      isPopular: true,
-      isFeatured: true,
-      sortOrder: 1,
-      tags: ["full body", "comprehensive", "popular", "cholesterol", "diabetes"],
-    },
-  });
-
-  // Link tests to package
-  await prisma.packageTest.createMany({
-    data: tests.map((t) => ({ packageId: healthPackage.id, testId: t.id })),
-    skipDuplicates: true,
-  });
-
-  console.log(`✅ 1 package created with ${tests.length} tests`);
-
-  // ── Testimonials ─────────────────────────────────────────────────────────
-  await prisma.testimonial.createMany({
-    skipDuplicates: true,
-    data: [
-      {
-        name: "Subrata Ghosh",
-        city: "Kolkata",
-        district: WBDistrict.KOLKATA,
-        rating: 5,
-        text: "Booked CBC and LFT online at 11 PM. Phlebotomist arrived at 7 AM sharp. Report was ready by 2 PM. Truly 24×7 service!",
-        isVerified: true,
+  // ── Testimonials ────────────────────────────────────────────────────────
+  for (const t of TESTIMONIALS) {
+    // Basic city to enum mapping or just string
+    await prisma.testimonial.create({
+      data: {
+        name: t.name,
+        city: t.city,
+        rating: t.rating,
+        text: t.text,
         isActive: true,
-        sortOrder: 1,
-      },
-      {
-        name: "Priya Banerjee",
-        city: "Howrah",
-        district: WBDistrict.HOWRAH,
-        rating: 5,
-        text: "The NABL accreditation gives so much confidence. My doctor specifically asked for reports from an NABL lab and HMD Labs delivered perfectly.",
-        isVerified: true,
-        isActive: true,
-        sortOrder: 2,
-      },
-      {
-        name: "Dr. Amit Mondal",
-        city: "Durgapur",
-        district: WBDistrict.PASCHIM_BARDHAMAN,
-        rating: 5,
-        text: "As a general physician in Durgapur, I regularly refer patients to HMD Labs. The report quality and turnaround time are excellent.",
-        isVerified: true,
-        isActive: true,
-        sortOrder: 3,
-      },
-    ],
-  });
+      }
+    });
+  }
+  console.log(`✅ ${TESTIMONIALS.length} testimonials seeded.`);
 
-  console.log(`✅ 3 testimonials created`);
-
-  // ── Demo Franchise Lead ──────────────────────────────────────────────────
-  const franchiseScore = calculateFranchiseLeadScore({
-    investmentCapacity: 3000000,
-    existingSpace: true,
-    businessExperience: 8,
-    franchiseType: "MINI_LAB",
-  });
-
-  await prisma.franchiseLead.upsert({
-    where: { id: "demo-lead-1" },
-    update: {},
-    create: {
-      id: "demo-lead-1",
-      applicantName: "Rajesh Kumar Das",
-      phone: "9876543210",
-      email: "rajesh.das@example.com",
-      franchiseType: FranchiseType.MINI_LAB,
-      preferredDistrict: WBDistrict.NADIA,
-      preferredCity: "Krishnanagar",
-      investmentCapacity: 3000000,
-      existingSpace: true,
-      spaceArea: 600,
-      businessExperience: 8,
-      currentOccupation: "Pharmacy Owner",
-      city: "Krishnanagar",
-      district: WBDistrict.NADIA,
-      pincode: "741101",
-      status: "CONTACTED",
-      score: getLeadScoreLabel(franchiseScore) as any,
-      leadScore: franchiseScore,
-      source: "website",
-      termsAccepted: true,
-      termsAcceptedAt: new Date(),
-      notes: "Pharmacy owner with existing space. High-quality lead.",
-    },
-  });
-
-  console.log(`✅ Demo franchise lead created (score: ${franchiseScore} – ${getLeadScoreLabel(franchiseScore)})`);
-
-  // ── Knowledge Hub Articles ───────────────────────────────────────────────
-  await prisma.knowledgeHubArticle.createMany({
-    skipDuplicates: true,
-    data: [
-      {
-        title: "Complete Guide to Blood Tests in West Bengal",
-        slug: "complete-guide-blood-tests-west-bengal",
-        excerpt: "Understanding CBC, LFT, KFT and other common blood tests.",
-        content: "# Complete Guide to Blood Tests\n\nBlood tests are the cornerstone of modern diagnostics...",
-        category: "TEST_GUIDE",
-        tags: ["blood test", "CBC", "LFT", "guide"],
-        authorName: "HMD Labs Medical Team",
-        isPublished: true,
-        publishedAt: new Date("2025-01-15"),
-        metaTitle: "Complete Blood Test Guide – HMD Labs West Bengal",
-        metaDescription: "Understand your blood test reports. CBC, LFT, KFT explained for West Bengal patients.",
-      },
-      {
-        title: "Dengue Season in West Bengal: Tests & Prevention",
-        slug: "dengue-season-west-bengal-tests-prevention",
-        excerpt: "Every monsoon, West Bengal sees dengue spikes. Know the tests and early warning signs.",
-        content: "# Dengue in West Bengal\n\nDengue fever is a mosquito-borne viral disease...",
-        category: "DISEASE_INFO",
-        tags: ["dengue", "monsoon", "NS1", "West Bengal"],
-        authorName: "Dr. Priya Sharma",
-        isPublished: true,
-        publishedAt: new Date("2025-02-01"),
-        metaTitle: "Dengue Tests & Prevention – West Bengal | HMD Labs",
-        metaDescription: "Dengue diagnosis with NS1 Antigen, IgM/IgG tests. Know the symptoms and prevention for West Bengal.",
-      },
-    ],
-  });
-
-  console.log(`✅ 2 knowledge hub articles created`);
-
-  console.log("\n🎉 Seed complete! Database ready for HMD Labs.");
-  console.log("📍 Lab: http://localhost:5555 (Prisma Studio: npm run db:studio)");
-  console.log("🌐 App: http://localhost:3000 (npm run dev)");
+  console.log("🎉 Seed complete! Database ready for HMD Labs.");
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Seed failed:", e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

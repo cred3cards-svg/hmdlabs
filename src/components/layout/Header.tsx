@@ -134,11 +134,11 @@ export default function Header() {
           {/* CTA actions */}
           <div className="hidden lg:flex items-center gap-2">
             <a
-              href="tel:03312345678"
+              href="tel:7980701285"
               className="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-brand-700 transition-colors"
             >
               <Phone className="h-4 w-4" />
-              <span>033-1234-5678</span>
+              <span>+91 79807 01285</span>
             </a>
             <Link href="/book-test" className="btn-primary text-xs px-4 py-2">
               Book Now

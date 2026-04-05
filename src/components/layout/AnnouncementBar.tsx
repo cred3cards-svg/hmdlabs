@@ -6,7 +6,7 @@ const tickers = [
   { icon: Award, text: "Fully NABL Accredited Laboratory" },
   { icon: Clock, text: "24×7 Operations – Never Closed" },
   { icon: MapPin, text: "Serving All 23 Districts of West Bengal" },
-  { icon: Phone, text: "Helpline: 033-1234-5678" },
+  { icon: Phone, text: "Helpline: +91 79807 01285" },
   { icon: Award, text: "ISO 15189 Certified Quality Management" },
   { icon: Clock, text: "Home Sample Collection Available Round the Clock" },
   { icon: MapPin, text: "200+ Collection Centers Across West Bengal" },

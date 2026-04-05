@@ -12,10 +12,12 @@ async function handleRequest(req: Request, context: any) {
   const { createHandler } = await import("@premieroctet/next-admin/appHandler");
   const prismaModule = await import("@/lib/prisma");
   const prisma = prismaModule.default || prismaModule.prisma;
+  const { options } = await import("@/lib/next-admin-options");
 
   const { run } = createHandler({
     apiBasePath: "/api/admin",
     prisma,
+    options,
   });
   return run(req, context);
 }
