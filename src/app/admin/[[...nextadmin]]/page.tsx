@@ -1,8 +1,6 @@
 export const dynamic = 'force-dynamic';
 
 import { NextAdmin } from "@premieroctet/next-admin/adapters/next";
-import { getNextAdminProps } from "@premieroctet/next-admin/appRouter";
-import prisma from "@/lib/prisma";
 import "@premieroctet/next-admin/theme";
 
 export default async function AdminPage({
@@ -12,6 +10,10 @@ export default async function AdminPage({
   params: { nextadmin?: string[] };
   searchParams: { [key: string]: string | string[] | undefined } | undefined;
 }) {
+  const { getNextAdminProps } = await import("@premieroctet/next-admin/appRouter");
+  const prismaModule = await import("@/lib/prisma");
+  const prisma = prismaModule.default || prismaModule.prisma;
+
   const props = await getNextAdminProps({
     params: params.nextadmin,
     searchParams,

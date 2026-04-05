@@ -1,14 +1,21 @@
 export const dynamic = 'force-dynamic';
 
-import { createHandler } from "@premieroctet/next-admin/appHandler";
-import prisma from "@/lib/prisma";
+export async function GET(req: Request, context: any) { return handleRequest(req, context); }
+export async function POST(req: Request, context: any) { return handleRequest(req, context); }
+export async function DELETE(req: Request, context: any) { return handleRequest(req, context); }
 
-const handler = async (req: Request, context: any) => {
+async function handleRequest(req: Request, context: any) {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return new Response(null, { status: 200 });
+  }
+  
+  const { createHandler } = await import("@premieroctet/next-admin/appHandler");
+  const prismaModule = await import("@/lib/prisma");
+  const prisma = prismaModule.default || prismaModule.prisma;
+
   const { run } = createHandler({
     apiBasePath: "/api/admin",
     prisma,
   });
   return run(req, context);
-};
-
-export { handler as GET, handler as POST, handler as DELETE };
+}
