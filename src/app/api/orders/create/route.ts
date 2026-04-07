@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
-    // 1. Find or create user (Guest Checkout)
+    // 1. Find or create user (Guest Checkout) - Using Phone as primary identifier
     let user = await prisma.user.findFirst({
       where: { phone: phone }
     });
@@ -36,7 +36,8 @@ export async function POST(req: NextRequest) {
         data: {
           name: name,
           phone: phone,
-          email: email || undefined,
+          // Skipping email in User model because it has a strict unique constraint 
+          // that blocks guest checkouts if the email was used before.
           role: "PATIENT",
           isActive: true,
         }
