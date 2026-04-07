@@ -36,11 +36,29 @@ const TIME_SLOTS = [
 ];
 
 const DISTRICTS = [
-  "Kolkata", "Howrah", "Hooghly", "North 24 Parganas", "South 24 Parganas",
-  "Nadia", "Murshidabad", "Darjeeling", "Kalimpong", "Jalpaiguri",
-  "Alipurduar", "Cooch Behar", "Malda", "Uttar Dinajpur", "Dakshin Dinajpur",
-  "Purba Bardhaman", "Paschim Bardhaman", "Birbhum", "Bankura", "Purulia",
-  "Purba Medinipur", "Paschim Medinipur", "Jhargram"
+  { label: "Alipurduar", value: "ALIPURDUAR" },
+  { label: "Bankura", value: "BANKURA" },
+  { label: "Birbhum", value: "BIRBHUM" },
+  { label: "Cooch Behar", value: "COOCH_BEHAR" },
+  { label: "Dakshin Dinajpur", value: "DAKSHIN_DINAJPUR" },
+  { label: "Darjeeling", value: "DARJEELING" },
+  { label: "Hooghly", value: "HOOGHLY" },
+  { label: "Howrah", value: "HOWRAH" },
+  { label: "Jalpaiguri", value: "JALPAIGURI" },
+  { label: "Jhargram", value: "JHARGRAM" },
+  { label: "Kalimpong", value: "KALIMPONG" },
+  { label: "Kolkata", value: "KOLKATA" },
+  { label: "Malda", value: "MALDA" },
+  { label: "Murshidabad", value: "MURSHIDABAD" },
+  { label: "Nadia", value: "NADIA" },
+  { label: "North 24 Parganas", value: "NORTH_24_PARGANAS" },
+  { label: "Paschim Bardhaman", value: "PASCHIM_BARDHAMAN" },
+  { label: "Paschim Medinipur", value: "PASCHIM_MEDINIPUR" },
+  { label: "Purba Bardhaman", value: "PURBA_BARDHAMAN" },
+  { label: "Purba Medinipur", value: "PURBA_MEDINIPUR" },
+  { label: "Purulia", value: "PURULIA" },
+  { label: "South 24 Parganas", value: "SOUTH_24_PARGANAS" },
+  { label: "Uttar Dinajpur", value: "UTTAR_DINAJPUR" }
 ];
 
 function BookingForm() {
@@ -62,7 +80,7 @@ function BookingForm() {
     gender: "MALE",
     address: "",
     city: "",
-    district: "Kolkata",
+    district: "KOLKATA",
     pincode: "",
     scheduledDate: "",
     scheduledSlot: TIME_SLOTS[0],
@@ -131,7 +149,9 @@ function BookingForm() {
         toast.success("Order placed successfully!");
         router.push(`/book-test/success?order=${order.orderNumber}`);
       } else {
-        toast.error("Something went wrong. Please try again.");
+        const errData = await res.json().catch(() => ({}));
+        console.error("Booking Error:", errData);
+        toast.error(errData.message || "Something went wrong. Please try again.");
       }
     } catch (err) {
       toast.error("Network error. Please check your connection.");
@@ -285,13 +305,16 @@ function BookingForm() {
                 </div>
                 <div>
                   <label className="label">District *</label>
-                  <select 
+                  <input
+                    list="district-list"
                     className="input"
+                    placeholder="Enter district name"
                     value={formData.district}
                     onChange={e => setFormData({...formData, district: e.target.value})}
-                  >
-                    {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-                  </select>
+                  />
+                  <datalist id="district-list">
+                    {DISTRICTS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                  </datalist>
                 </div>
               </div>
             </div>
@@ -357,7 +380,9 @@ function BookingForm() {
                 <div className="card p-4 bg-gray-50/50">
                   <p className="text-[10px] uppercase font-bold text-gray-400 mb-2">Collection Address</p>
                   <p className="text-xs text-gray-600 leading-relaxed">{formData.address}, {formData.city} - {formData.pincode}</p>
-                  <p className="text-xs font-bold mt-1">{formData.district}</p>
+                  <p className="text-xs font-bold mt-1">
+                    {DISTRICTS.find(d => d.value === formData.district)?.label || formData.district}
+                  </p>
                 </div>
                 <div className="card p-4 bg-gray-50/50 sm:col-span-2">
                   <p className="text-[10px] uppercase font-bold text-gray-400 mb-2">Appointment</p>

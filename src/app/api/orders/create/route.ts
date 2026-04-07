@@ -49,31 +49,38 @@ export async function POST(req: NextRequest) {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `HMD-${dateStr}-${randomSuffix}`;
 
+    // Flexibility: Check if district is a valid enum value, otherwise store it in the address string
+    const validDistricts = Object.values(WBDistrict);
+    const districtEnum = validDistricts.includes(district as any) ? (district as WBDistrict) : null;
+    
+    // If district isn't in our enum, we append it to the city/address to ensure it's not lost
+    const finalCity = districtEnum ? city : `${city}, ${district}`;
+
     const order = await prisma.order.create({
       data: {
         orderNumber,
         userId: user.id,
         status: OrderStatus.PENDING,
         paymentStatus: PaymentStatus.PENDING,
-        paymentMethod: PaymentMethod.CASH, // Default to COD for now
+        paymentMethod: PaymentMethod.CASH,
         isHomeCollection: true,
         scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
         scheduledSlot: scheduledSlot,
         collectionAddress: address,
-        collectionCity: city,
-        collectionDistrict: district as WBDistrict,
-        collectionPincode: pincode,
-        subtotal: subtotal,
-        totalAmount: totalAmount,
-        homeFee: homeFee,
+        collectionCity: finalCity,
+        collectionDistrict: districtEnum,
+        collectionPincode: pincode ? String(pincode) : null,
+        subtotal: Number(subtotal) || 0,
+        totalAmount: Number(totalAmount) || 0,
+        homeFee: Number(homeFee) || 0,
         items: {
           create: testId ? [{
             name: body.testName || "Diagnostic Test",
-            price: subtotal,
+            price: Number(subtotal) || 0,
             testId: testId,
           }] : [{
             name: body.packageName || "Health Package",
-            price: subtotal,
+            price: Number(subtotal) || 0,
             packageId: packageId,
           }]
         }
@@ -90,8 +97,12 @@ export async function POST(req: NextRequest) {
       message: "Order placed successfully! We will call you to confirm.",
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("[ORDER_CREATE_ERROR]", error);
-    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ 
+      message: "Internal Server Error", 
+      error: error.message,
+      details: error.code 
+    }, { status: 500 });
   }
 }
