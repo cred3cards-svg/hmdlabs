@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import fs from "fs/promises";
-import path from "path";
+import { UTApi } from "uploadthing/server";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,32 +28,25 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const uploadDir = path.join(process.cwd(), "public/uploads/prescriptions");
-    await fs.mkdir(uploadDir, { recursive: true }).catch(() => {});
+    // Upload to UploadThing
+    const utapi = new UTApi();
+    const uploadResponses = await utapi.uploadFiles(files);
 
-    for (const file of files) {
-      const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-      if (!allowedTypes.includes(file.type)) continue;
+    for (let i = 0; i < uploadResponses.length; i++) {
+        const result = uploadResponses[i];
+        if (result.error) {
+            console.error("[uploadthing-error]", result.error);
+            continue;
+        }
 
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) continue;
-
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const safeName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-      const filePath = path.join(uploadDir, safeName);
-      
-      await fs.writeFile(filePath, buffer);
-      
-      const fileUrl = `/uploads/prescriptions/${safeName}`;
-
-      await prisma.prescription.create({
-        data: {
-          userId: user.id,
-          fileName: file.name,
-          mimeType: file.type,
-          fileUrl: fileUrl,
-        },
-      });
+        await prisma.prescription.create({
+            data: {
+              userId: user.id,
+              fileName: files[i].name,
+              mimeType: files[i].type,
+              fileUrl: result.data.url,
+            },
+        });
     }
 
     const prescriptionId = `HMD-RX-${Date.now().toString(36).toUpperCase()}`;
@@ -62,7 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       prescriptionId,
-      message: "Prescription uploaded successfully.",
+      message: "Prescription uploaded successfully. Our team will review and confirm tests within 2 hours.",
       uploadedAt: new Date().toISOString(),
     });
   } catch (error) {

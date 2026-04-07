@@ -62,7 +62,7 @@ export default async function PopularTestsSection() {
                       <span className="ml-1.5 text-xs text-gray-400 line-through">{formatCurrency(test.mrpPrice)}</span>
                     )}
                   </div>
-                  <Link href={`/book-test?test=${test.slug}`} className="btn-primary text-xs px-3 py-2">
+                  <Link href={`/book-test/schedule?test=${test.slug}`} className="btn-primary text-xs px-3 py-2">
                     Book
                   </Link>
                 </div>

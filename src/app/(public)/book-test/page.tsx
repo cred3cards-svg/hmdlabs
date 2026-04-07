@@ -1,167 +1,164 @@
 import type { Metadata } from "next";
-import { Search, FlaskConical, Filter, Clock, Home } from "lucide-react";
+import { Search, FlaskConical, Filter, Clock, Home, ArrowLeft } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+import prisma from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Book a Diagnostic Test – West Bengal",
   description: "Book 800+ NABL-accredited diagnostic tests online. Home collection across all 23 districts of West Bengal. 24×7 booking available.",
 };
 
-const CATEGORIES = [
-  "All Tests", "Haematology", "Biochemistry", "Endocrinology", "Diabetes",
-  "Cardiology", "Vitamins & Minerals", "Infection & Immunity", "Hormones",
-  "Cancer Markers", "Urine & Stool", "Microbiology",
-];
+export default async function BookTestPage({ searchParams }: { searchParams: { q?: string; category?: string } }) {
+  const query = searchParams.q || "";
+  const categorySlug = searchParams.category || "";
 
-const SAMPLE_TESTS = [
-  { name: "Complete Blood Count (CBC)", code: "CBC", price: 249, mrp: 400, tat: 6, sample: "Blood", category: "Haematology", popular: true },
-  { name: "Liver Function Test (LFT)", code: "LFT", price: 449, mrp: 650, tat: 8, sample: "Blood", category: "Biochemistry", popular: true },
-  { name: "Kidney Function Test (KFT/RFT)", code: "KFT", price: 499, mrp: 750, tat: 8, sample: "Blood", category: "Biochemistry", popular: true },
-  { name: "Thyroid Profile (T3 T4 TSH)", code: "TFT", price: 599, mrp: 900, tat: 12, sample: "Blood", category: "Endocrinology", popular: true },
-  { name: "HbA1c (Glycated Haemoglobin)", code: "HBA1C", price: 399, mrp: 600, tat: 6, sample: "Blood", category: "Diabetes", popular: true },
-  { name: "Lipid Profile", code: "LIPID", price: 449, mrp: 700, tat: 8, sample: "Blood", category: "Cardiology", popular: false },
-  { name: "Vitamin D (25-OH)", code: "VITD", price: 799, mrp: 1400, tat: 24, sample: "Blood", category: "Vitamins & Minerals", popular: true },
-  { name: "Vitamin B12", code: "VITB12", price: 699, mrp: 1200, tat: 24, sample: "Blood", category: "Vitamins & Minerals", popular: false },
-  { name: "Blood Sugar Fasting (BSF)", code: "BSF", price: 79, mrp: 120, tat: 4, sample: "Blood", category: "Diabetes", popular: false },
-  { name: "Urine Routine & Microscopy", code: "URE", price: 99, mrp: 150, tat: 4, sample: "Urine", category: "Urine & Stool", popular: false },
-  { name: "ESR (Westergren Method)", code: "ESR", price: 89, mrp: 130, tat: 4, sample: "Blood", category: "Haematology", popular: false },
-  { name: "C-Reactive Protein (CRP)", code: "CRP", price: 299, mrp: 500, tat: 8, sample: "Blood", category: "Infection & Immunity", popular: false },
-];
+  // Fetch all tests with their categories
+  const [tests, categories] = await Promise.all([
+    prisma.test.findMany({
+      where: {
+        isActive: true,
+        AND: [
+          query ? {
+            OR: [
+              { name: { contains: query, mode: 'insensitive' } },
+              { code: { contains: query, mode: 'insensitive' } },
+            ]
+          } : {},
+          categorySlug ? {
+            category: { slug: categorySlug }
+          } : {}
+        ]
+      },
+      include: { category: true },
+      orderBy: { name: 'asc' }
+    }),
+    prisma.testCategory.findMany({
+      orderBy: { name: 'asc' }
+    })
+  ]);
 
-export default function BookTestPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page header */}
       <div className="bg-brand-900 text-white py-10">
-        <div className="section-container">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="section-container text-center max-w-3xl">
+          <div className="flex items-center justify-center gap-3 mb-4">
             <FlaskConical className="h-6 w-6 text-amber-400" />
-            <span className="badge-nabl text-xs">NABL Accredited Tests</span>
-            <span className="badge-24x7 text-xs">24×7 Booking</span>
+            <span className="badge-nabl text-xs">800+ Tests Available</span>
+            <span className="badge-24x7 text-xs">NABL Certified</span>
           </div>
-          <h1 className="text-3xl font-bold font-display sm:text-4xl">Book a Diagnostic Test</h1>
-          <p className="mt-2 text-brand-200">800+ tests · Home collection across West Bengal · Results in 4–48 hours</p>
+          <h1 className="text-3xl font-bold font-display sm:text-4xl px-4">Book a Diagnostic Test</h1>
+          <p className="mt-3 text-brand-200">Home collection across all 23 districts of West Bengal.</p>
 
-          {/* Search */}
-          <div className="mt-6 flex max-w-2xl gap-2">
+          <form action="/book-test" method="GET" className="mt-8 flex gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
+                name="q"
                 type="text"
+                defaultValue={query}
                 placeholder="Search by test name, code, or symptom..."
-                className="w-full rounded-xl bg-white pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                className="w-full rounded-xl bg-white pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 shadow-sm"
               />
             </div>
-            <button className="btn-accent shrink-0">Search</button>
-          </div>
+            <button type="submit" className="btn-accent shrink-0 px-6">Search</button>
+          </form>
         </div>
       </div>
 
       <div className="section-container py-8">
-        <div className="flex gap-6">
-          {/* Sidebar filters */}
-          <aside className="hidden lg:block w-56 shrink-0">
-            <div className="card p-5 sticky top-24">
-              <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-gray-900">
-                <Filter className="h-4 w-4" />
-                Filters
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Categories Sidebar */}
+          <aside className="lg:w-64 shrink-0">
+            <div className="sticky top-24">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">Categories</h3>
+                {categorySlug && (
+                  <Link href="/book-test" className="text-xs text-brand-600 hover:underline">Clear</Link>
+                )}
               </div>
-              
-              <div className="mb-5">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Category</p>
-                <div className="space-y-1">
-                  {CATEGORIES.map((cat) => (
-                    <label key={cat} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-brand-700 py-0.5">
-                      <input type="checkbox" className="rounded border-gray-300 text-brand-700 focus:ring-brand-500" />
-                      {cat}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-5">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Sample Type</p>
-                {["Blood", "Urine", "Stool", "Swab", "Other"].map((s) => (
-                  <label key={s} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-brand-700 py-0.5">
-                    <input type="checkbox" className="rounded border-gray-300 text-brand-700 focus:ring-brand-500" />
-                    {s}
-                  </label>
+              <div className="flex flex-wrap lg:flex-col gap-2">
+                <Link 
+                  href="/book-test"
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    !categorySlug ? "bg-brand-600 text-white shadow-brand shadow-sm" : "bg-white text-gray-600 hover:bg-brand-50 hover:text-brand-700 border border-gray-100"
+                  }`}
+                >
+                  All Categories
+                </Link>
+                {categories.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={`/book-test?category=${cat.slug}${query ? `&q=${query}` : ""}`}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      categorySlug === cat.slug ? "bg-brand-600 text-white shadow-brand shadow-sm" : "bg-white text-gray-600 hover:bg-brand-50 hover:text-brand-700 border border-gray-100"
+                    }`}
+                  >
+                    {cat.name}
+                  </Link>
                 ))}
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Price Range</p>
-                <div className="space-y-1">
-                  {["Under ₹200", "₹200–500", "₹500–1000", "₹1000+"].map((r) => (
-                    <label key={r} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-brand-700 py-0.5">
-                      <input type="radio" name="price" className="border-gray-300 text-brand-700 focus:ring-brand-500" />
-                      {r}
-                    </label>
-                  ))}
-                </div>
               </div>
             </div>
           </aside>
 
-          {/* Test listing */}
+          {/* Test Listing */}
           <main className="flex-1 min-w-0">
-            {/* Category tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-3 mb-5 scrollbar-thin">
-              {CATEGORIES.slice(0, 8).map((cat) => (
-                <button
-                  key={cat}
-                  className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                    cat === "All Tests"
-                      ? "bg-brand-700 text-white"
-                      : "bg-white border border-gray-200 text-gray-700 hover:border-brand-300 hover:text-brand-700"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-sm text-gray-500"><span className="font-bold text-gray-900">{tests.length}</span> tests showing</p>
+              {query && (
+                <Link href="/book-test" className="text-xs text-gray-500 flex items-center gap-1 hover:text-brand-700">
+                  <ArrowLeft className="h-3 w-3" /> Clear search results
+                </Link>
+              )}
             </div>
 
-            <p className="text-sm text-gray-500 mb-4">{SAMPLE_TESTS.length} tests found</p>
+            {tests.length === 0 ? (
+              <div className="card py-16 px-4 text-center">
+                <div className="mx-auto h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+                  <Search className="h-6 w-6 text-gray-300" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">No tests found</h3>
+                <p className="text-sm text-gray-500 mt-1">Try another search term or browse by category.</p>
+                <Link href="/book-test" className="btn-secondary mt-6 inline-flex">Show All Tests</Link>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {tests.map((test) => (
+                  <div key={test.id} className="card p-5 group hover:border-brand-300 transition-colors">
+                    <div className="flex flex-col h-full">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{test.category?.name || "General"}</p>
+                          <h3 className="font-bold text-gray-900 mt-0.5 leading-snug font-display h-10 line-clamp-2">{test.name}</h3>
+                        </div>
+                        <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded-full font-mono text-gray-500">{test.code}</span>
+                      </div>
 
-            <div className="space-y-3">
-              {SAMPLE_TESTS.map((test) => (
-                <div key={test.code} className="card p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        {test.popular && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Popular</span>
-                        )}
-                        <span className="text-xs text-gray-400 font-mono">{test.code}</span>
-                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600">{test.category}</span>
+                      <div className="flex items-center gap-3 text-[11px] text-gray-500 mb-5">
+                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {test.turnaroundTime}h</span>
+                        <span className="flex items-center gap-1"><FlaskConical className="h-3 w-3" /> {test.sampleType}</span>
+                        <span className="flex items-center gap-1"><Home className="h-3 w-3 text-green-600" /> Home Collection</span>
                       </div>
-                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base font-display">{test.name}</h3>
-                      <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-gray-500">
-                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {test.tat}h report</span>
-                        <span className="flex items-center gap-1"><FlaskConical className="h-3 w-3" /> {test.sample}</span>
-                        <span className="flex items-center gap-1"><Home className="h-3 w-3 text-green-600" /> Home collection available</span>
-                      </div>
-                    </div>
 
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-gray-900 font-display">{formatCurrency(test.price)}</div>
-                        {test.mrp > test.price && (
-                          <div className="text-xs text-gray-400 line-through">{formatCurrency(test.mrp)}</div>
-                        )}
+                      <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
+                        <div>
+                          <p className="text-lg font-bold text-gray-900 font-display">{formatCurrency(test.discountedPrice)}</p>
+                          {test.mrpPrice > test.discountedPrice && (
+                            <p className="text-xs text-gray-400 line-through">{formatCurrency(test.mrpPrice)}</p>
+                          )}
+                        </div>
+                        <Link
+                          href={`/book-test/schedule?test=${test.slug}`}
+                          className="btn-primary text-xs px-5 py-2.5"
+                        >
+                          Book Now
+                        </Link>
                       </div>
-                      <Link
-                        href={`/book-test/schedule?test=${test.code}`}
-                        className="btn-primary text-xs px-4 py-2"
-                      >
-                        Book Now
-                      </Link>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </main>
         </div>
       </div>
