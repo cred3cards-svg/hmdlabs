@@ -521,10 +521,15 @@ function BookingForm() {
         </div>
       </div>
 
-      {/* Debug Window */}
-      {debugInfo && (
-        <div className="mt-12 card p-6 bg-slate-900 text-slate-300 font-mono text-xs overflow-auto max-h-[500px]">
-          <h3 className="text-white font-bold mb-4 border-b border-slate-700 pb-2">Diagnostic Debug Console</h3>
+      {/* Always Visible Debug Window for Diagnosis */}
+      <div className="mt-12 card p-6 bg-slate-900 text-slate-300 font-mono text-xs overflow-auto max-h-[500px]">
+        <h3 className="text-white font-bold mb-4 border-b border-slate-700 pb-2 flex justify-between items-center">
+          Diagnostic Debug Console
+          <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 capitalize">{debugInfo?.status || "Ready"}</span>
+        </h3>
+        {!debugInfo ? (
+          <p className="text-slate-500 italic">No diagnostic data captured yet. Please try to "Place Booking" to trigger the log.</p>
+        ) : (
           <div className="space-y-4">
             <div>
               <p className="text-blue-400 mb-1">// HTTP Status</p>
@@ -545,8 +550,8 @@ function BookingForm() {
               <pre>{JSON.stringify(debugInfo.response, null, 2)}</pre>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </>
   );
 }
