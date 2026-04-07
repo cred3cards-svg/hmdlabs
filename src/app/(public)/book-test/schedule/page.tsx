@@ -71,7 +71,6 @@ function BookingForm() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -128,7 +127,6 @@ function BookingForm() {
 
   const handleSubmit = async () => {
     setLoading(true);
-    setDebugInfo({ status: "pending", payload: null, response: null });
     try {
       const payload = {
         ...formData,
@@ -141,37 +139,21 @@ function BookingForm() {
         homeFee: 0,
       };
 
-      setDebugInfo((prev: any) => ({ ...prev, payload }));
-
       const res = await fetch("/api/orders/create", {
         method: "POST",
         body: JSON.stringify(payload),
       });
 
-      const rawResponse = await res.text();
-      let resJson;
-      try {
-        resJson = JSON.parse(rawResponse);
-      } catch (e) {
-        resJson = { raw: rawResponse };
-      }
-
-      setDebugInfo((prev: any) => ({ 
-        ...prev, 
-        status: res.status, 
-        statusText: res.statusText,
-        response: resJson 
-      }));
-
       if (res.ok) {
+        const order = await res.json();
         toast.success("Order placed successfully!");
-        router.push(`/book-test/success?order=${resJson.orderNumber}`);
+        router.push(`/book-test/success?order=${order.orderNumber}`);
       } else {
-        console.error("Booking Error:", resJson);
-        toast.error(resJson.message || `Error ${res.status}: ${res.statusText}`);
+        const errData = await res.json().catch(() => ({}));
+        console.error("Booking Error:", errData);
+        toast.error(errData.message || "Something went wrong. Please try again.");
       }
     } catch (err: any) {
-      setDebugInfo((prev: any) => ({ ...prev, error: err.message, stack: err.stack }));
       toast.error("Network error. Please check your connection.");
     } finally {
       setLoading(false);
@@ -521,37 +503,6 @@ function BookingForm() {
         </div>
       </div>
 
-      {/* Always Visible Debug Window for Diagnosis */}
-      <div className="mt-12 card p-6 bg-slate-900 text-slate-300 font-mono text-xs overflow-auto max-h-[500px]">
-        <h3 className="text-white font-bold mb-4 border-b border-slate-700 pb-2 flex justify-between items-center">
-          Diagnostic Debug Console
-          <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 capitalize">{debugInfo?.status || "Ready"}</span>
-        </h3>
-        {!debugInfo ? (
-          <p className="text-slate-500 italic">No diagnostic data captured yet. Please try to "Place Booking" to trigger the log.</p>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <p className="text-blue-400 mb-1">// HTTP Status</p>
-              <p>{debugInfo.status} {debugInfo.statusText}</p>
-            </div>
-            {debugInfo.error && (
-              <div>
-                <p className="text-red-400 mb-1">// Error Message</p>
-                <p>{debugInfo.error}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-green-400 mb-1">// Request Payload Sent</p>
-              <pre>{JSON.stringify(debugInfo.payload, null, 2)}</pre>
-            </div>
-            <div>
-              <p className="text-amber-400 mb-1">// Backend Response Data</p>
-              <pre>{JSON.stringify(debugInfo.response, null, 2)}</pre>
-            </div>
-          </div>
-        )}
-      </div>
     </>
   );
 }
