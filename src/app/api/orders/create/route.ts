@@ -49,60 +49,67 @@ export async function POST(req: NextRequest) {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const orderNumber = `HMD-${dateStr}-${randomSuffix}`;
 
-    // Flexibility: Check if district is a valid enum value, otherwise store it in the address string
-    const validDistricts = Object.values(WBDistrict);
-    const districtEnum = validDistricts.includes(district as any) ? (district as WBDistrict) : null;
-    
-    // If district isn't in our enum, we append it to the city/address to ensure it's not lost
-    const finalCity = districtEnum ? city : `${city}, ${district}`;
+    // Flexibility: Store everything in free-text fields to bypass strict enum/pattern checks as requested
+    const addressWithDistrict = `${address}, ${district || ''}, PIN: ${pincode || ''}`.trim();
+    const finalCity = city; 
 
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        userId: user.id,
-        status: OrderStatus.PENDING,
-        paymentStatus: PaymentStatus.PENDING,
-        paymentMethod: PaymentMethod.CASH,
-        isHomeCollection: true,
-        scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-        scheduledSlot: scheduledSlot,
-        collectionAddress: address,
-        collectionCity: finalCity,
-        collectionDistrict: districtEnum,
-        collectionPincode: pincode ? String(pincode) : null,
-        subtotal: Number(subtotal) || 0,
-        totalAmount: Number(totalAmount) || 0,
-        homeFee: Number(homeFee) || 0,
-        items: {
-          create: testId ? [{
-            name: body.testName || "Diagnostic Test",
-            price: Number(subtotal) || 0,
-            testId: testId,
-          }] : [{
-            name: body.packageName || "Health Package",
-            price: Number(subtotal) || 0,
-            packageId: packageId,
-          }]
+    try {
+      const order = await prisma.order.create({
+        data: {
+          orderNumber,
+          userId: user.id,
+          status: OrderStatus.PENDING,
+          paymentStatus: PaymentStatus.PENDING,
+          paymentMethod: PaymentMethod.CASH,
+          isHomeCollection: true,
+          scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+          scheduledSlot: scheduledSlot,
+          collectionAddress: addressWithDistrict,
+          collectionCity: finalCity,
+          collectionDistrict: null, // Bypassing enum check
+          collectionPincode: pincode ? String(pincode) : null,
+          subtotal: Number(subtotal) || 0,
+          totalAmount: Number(totalAmount) || 0,
+          homeFee: Number(homeFee) || 0,
+          items: {
+            create: testId ? [{
+              name: body.testName || "Diagnostic Test",
+              price: Number(subtotal) || 0,
+              testId: testId,
+            }] : [{
+              name: body.packageName || "Health Package",
+              price: Number(subtotal) || 0,
+              packageId: packageId,
+            }]
+          }
+        },
+        include: {
+          items: true
         }
-      },
-      include: {
-        items: true
-      }
-    });
+      });
 
-    return NextResponse.json({
-      success: true,
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      message: "Order placed successfully! We will call you to confirm.",
-    });
+      return NextResponse.json({
+        success: true,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        message: "Order placed successfully! We will call you to confirm.",
+      });
+
+    } catch (orderError: any) {
+      console.error("[PRISMA_ORDER_ERROR]", orderError);
+      return NextResponse.json({ 
+        message: "Database Error", 
+        error: orderError.message,
+        code: orderError.code 
+      }, { status: 500 });
+    }
 
   } catch (error: any) {
     console.error("[ORDER_CREATE_ERROR]", error);
     return NextResponse.json({ 
       message: "Internal Server Error", 
       error: error.message,
-      details: error.code 
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }, { status: 500 });
   }
 }
