@@ -1,250 +1,176 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { BookOpen, Tag, Clock, ArrowRight, TrendingUp } from "lucide-react";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Knowledge Hub – Health Tips, Test Guides & Disease Info | HMD Labs West Bengal",
-  description:
-    "Expert health articles, diagnostic test guides, disease information and preventive care tips curated for West Bengal patients. Free health knowledge from NABL accredited HMD Labs.",
-};
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Search, Calendar, User, ArrowRight, Loader2, BookOpen } from "lucide-react";
+import { format } from "date-fns";
 
 const CATEGORIES = [
-  { label: "All Articles", slug: "all", count: 48 },
-  { label: "Health Tips", slug: "health-tips", count: 12 },
-  { label: "Test Guides", slug: "test-guide", count: 15 },
-  { label: "Disease Info", slug: "disease-info", count: 8 },
-  { label: "Nutrition", slug: "nutrition", count: 6 },
-  { label: "Preventive Care", slug: "preventive-care", count: 5 },
-  { label: "Lab Science", slug: "lab-science", count: 2 },
+  { label: "All", value: "ALL" },
+  { label: "Health Tips", value: "HEALTH_TIPS" },
+  { label: "Test Guides", value: "TEST_GUIDE" },
+  { label: "Disease Info", value: "DISEASE_INFO" },
+  { label: "Nutrition", value: "NUTRITION" },
+  { label: "Preventive Care", value: "PREVENTIVE_CARE" },
+  { label: "Lab Science", value: "LAB_SCIENCE" },
 ];
-
-const FEATURED_ARTICLE = {
-  title: "Complete Guide to Blood Tests: What Every West Bengal Patient Should Know",
-  excerpt:
-    "From CBC to LFT – understand your diagnostic reports, normal ranges, and what abnormal values mean for your health.",
-  category: "Test Guide",
-  readTime: "8 min read",
-  date: "March 2025",
-  tags: ["Blood Test", "Report Understanding", "CBC", "LFT"],
-};
-
-const ARTICLES = [
-  {
-    title: "Why Fasting Matters Before Your Blood Test",
-    excerpt: "Learn which tests require fasting, how long to fast, and what you can drink before your sample collection.",
-    category: "Test Guide",
-    readTime: "5 min",
-    date: "Feb 2025",
-    tags: ["Fasting", "Blood Test Prep"],
-    popular: true,
-  },
-  {
-    title: "Dengue Season in West Bengal: Symptoms, Tests & Prevention",
-    excerpt: "Every monsoon, West Bengal sees dengue spikes. Know the NS1 Antigen, IgM/IgG tests and early warning signs.",
-    category: "Disease Info",
-    readTime: "6 min",
-    date: "Jan 2025",
-    tags: ["Dengue", "Monsoon", "West Bengal"],
-    popular: true,
-  },
-  {
-    title: "Thyroid Disorders in Women: Understanding TSH, T3, T4",
-    excerpt: "Hypothyroidism affects 1 in 10 women in India. Know the symptoms, tests, and normal reference ranges.",
-    category: "Health Tips",
-    readTime: "7 min",
-    date: "Jan 2025",
-    tags: ["Thyroid", "Women Health", "Hormones"],
-    popular: true,
-  },
-  {
-    title: "Diabetes Management: HbA1c vs Blood Glucose – What's the Difference?",
-    excerpt: "HbA1c gives a 3-month average; glucose shows today's level. Both matter. Here's why.",
-    category: "Disease Info",
-    readTime: "5 min",
-    date: "Dec 2024",
-    tags: ["Diabetes", "HbA1c", "Blood Sugar"],
-    popular: false,
-  },
-  {
-    title: "Vitamin D Deficiency: Why It's Epidemic in Kolkata Despite Sunshine",
-    excerpt: "Paradoxically, Indians are vitamin D deficient despite abundant sun. Understand the causes and testing.",
-    category: "Nutrition",
-    readTime: "4 min",
-    date: "Dec 2024",
-    tags: ["Vitamin D", "Deficiency", "Kolkata"],
-    popular: false,
-  },
-  {
-    title: "Understanding Your Complete Blood Count (CBC) Report",
-    excerpt: "Haemoglobin, WBC, platelets, MCV, MCH – decode every parameter in your CBC report with normal ranges.",
-    category: "Test Guide",
-    readTime: "9 min",
-    date: "Nov 2024",
-    tags: ["CBC", "Report Reading", "Haematology"],
-    popular: true,
-  },
-  {
-    title: "Liver Health: When Should You Get an LFT?",
-    excerpt: "Fatty liver, jaundice, alcohol use – know the indicators for getting a Liver Function Test done.",
-    category: "Health Tips",
-    readTime: "5 min",
-    date: "Nov 2024",
-    tags: ["Liver", "LFT", "Fatty Liver"],
-    popular: false,
-  },
-  {
-    title: "Annual Health Checkup at 30, 40, 50: Age-Specific Test Guide",
-    excerpt: "Your body's needs change with age. Here's exactly which tests to prioritize at each decade.",
-    category: "Preventive Care",
-    readTime: "6 min",
-    date: "Oct 2024",
-    tags: ["Preventive", "Annual Checkup", "Age-Specific"],
-    popular: false,
-  },
-];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  "Test Guide": "bg-brand-50 text-brand-700",
-  "Health Tips": "bg-green-50 text-green-700",
-  "Disease Info": "bg-red-50 text-red-700",
-  "Nutrition": "bg-orange-50 text-orange-700",
-  "Preventive Care": "bg-purple-50 text-purple-700",
-  "Lab Science": "bg-gray-100 text-gray-700",
-};
 
 export default function KnowledgeHubPage() {
+  const [articles, setArticles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("ALL");
+
+  useEffect(() => {
+    async function fetchArticles() {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/knowledge/list");
+        if (res.ok) {
+          const data = await res.json();
+          setArticles(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch articles", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchArticles();
+  }, []);
+
+  const filteredArticles = articles.filter(art => {
+    const matchesSearch = art.title.toLowerCase().includes(search.toLowerCase()) || 
+                         art.excerpt?.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = activeCategory === "ALL" || art.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-brand-900 text-white py-12">
-        <div className="section-container">
-          <div className="flex items-center gap-3 mb-4">
-            <BookOpen className="h-6 w-6 text-amber-400" />
-            <span className="badge-nabl text-xs">Expert Health Content</span>
-          </div>
-          <h1 className="text-3xl font-bold font-display sm:text-4xl">Knowledge Hub</h1>
-          <p className="mt-2 text-brand-200 max-w-2xl">
-            Evidence-based health articles, diagnostic guides and preventive care tips — curated by 
-            HMD Labs' medical team for patients across West Bengal.
+    <div className="bg-gray-50 min-h-screen pb-20">
+      {/* Hero Section */}
+      <section className="bg-brand-900 text-white pt-24 pb-32 relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 h-96 w-96 rounded-full bg-brand-800/30 blur-3xl" />
+        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 h-64 w-64 rounded-full bg-brand-700/20 blur-2xl" />
+        
+        <div className="section-container relative z-10 text-center">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-800/50 border border-brand-700 text-brand-300 text-[10px] font-bold uppercase tracking-wider mb-6">
+            <BookOpen className="h-3.5 w-3.5" /> HMD Knowledge Hub
+          </span>
+          <h1 className="text-4xl md:text-5xl font-bold font-display mb-6 tracking-tight leading-tight">
+            Your Gateway to a <br className="hidden md:block" /> <span className="text-brand-300">Healthier Lifestyle.</span>
+          </h1>
+          <p className="max-w-2xl mx-auto text-brand-100 text-lg mb-10 leading-relaxed opacity-90">
+            Empowering you with evidence-based health insights, diagnostic guides, and the latest medical guidelines from leading Indian health authorities.
           </p>
 
-          {/* Search */}
-          <div className="mt-6 flex max-w-xl gap-2">
-            <input
-              type="text"
-              placeholder="Search articles, topics, conditions..."
-              className="flex-1 rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-sm text-white placeholder-brand-300 focus:outline-none focus:ring-2 focus:ring-white/20"
+          {/* Search Bar */}
+          <div className="max-w-xl mx-auto relative group">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-brand-400 group-focus-within:text-brand-300 transition-colors">
+              <Search className="h-5 w-5" />
+            </div>
+            <input 
+              type="text" 
+              className="w-full h-14 pl-12 pr-6 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white/15 transition-all text-lg shadow-2xl" 
+              placeholder="Search health topics, tests, or diseases..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
-            <button className="btn-accent shrink-0">Search</button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="section-container py-10">
-        {/* Category tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-3 mb-8">
-          {CATEGORIES.map((cat) => (
+      {/* Content Section */}
+      <section className="section-container -mt-16 relative z-20">
+        {/* Category Filters */}
+        <div className="flex flex-wrap justify-center gap-2 mb-12">
+          {CATEGORIES.map(cat => (
             <button
-              key={cat.slug}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
-                cat.slug === "all"
-                  ? "bg-brand-700 text-white"
-                  : "bg-white border border-gray-200 text-gray-700 hover:border-brand-300 hover:text-brand-700"
+              key={cat.value}
+              onClick={() => setActiveCategory(cat.value)}
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                activeCategory === cat.value 
+                ? "bg-brand-600 text-white shadow-xl shadow-brand-600/20 scale-105" 
+                : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-100"
               }`}
             >
               {cat.label}
-              <span className="ml-1.5 text-[10px] opacity-60">{cat.count}</span>
             </button>
           ))}
         </div>
 
-        {/* Featured article */}
-        <div className="mb-10 rounded-3xl bg-gradient-to-r from-brand-900 to-brand-700 p-8 text-white">
-          <div className="flex items-center gap-3 mb-4">
-            <TrendingUp className="h-5 w-5 text-amber-400" />
-            <span className="text-sm font-semibold text-amber-400">Featured Article</span>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl shadow-sm">
+            <Loader2 className="h-10 w-10 animate-spin text-brand-600 mb-4" />
+            <p className="text-gray-500 font-medium">Curating your health feed...</p>
           </div>
-          <h2 className="text-2xl font-bold font-display sm:text-3xl leading-tight max-w-2xl">
-            {FEATURED_ARTICLE.title}
-          </h2>
-          <p className="mt-3 text-brand-200 max-w-xl">{FEATURED_ARTICLE.excerpt}</p>
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-brand-300">
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4" /> {FEATURED_ARTICLE.readTime}
-            </span>
-            <span>{FEATURED_ARTICLE.date}</span>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {FEATURED_ARTICLE.tags.map((tag) => (
-              <span key={tag} className="rounded-full bg-white/10 px-3 py-0.5 text-xs">
-                {tag}
-              </span>
+        ) : filteredArticles.length > 0 ? (
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {filteredArticles.map((art, idx) => (
+              <ArticleCard key={art.id} article={art} index={idx} />
             ))}
           </div>
-          <Link
-            href="/knowledge-hub/blood-test-guide"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-brand-900 hover:bg-brand-50 transition-colors"
-          >
-            Read Article <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        {/* Articles grid */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {ARTICLES.map((article, i) => (
-            <Link
-              key={i}
-              href={`/knowledge-hub/${article.title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}`}
-              className="card p-5 flex flex-col hover:-translate-y-0.5 transition-transform"
-            >
-              {/* Placeholder image */}
-              <div className="rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 h-32 mb-4 flex items-center justify-center">
-                <BookOpen className="h-10 w-10 text-brand-200" />
-              </div>
-
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                    CATEGORY_COLORS[article.category] || "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  {article.category}
-                </span>
-                {article.popular && (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-                    Popular
-                  </span>
-                )}
-              </div>
-
-              <h3 className="font-semibold text-gray-900 text-sm leading-snug font-display flex-1">
-                {article.title}
-              </h3>
-              <p className="mt-1.5 text-xs text-gray-500 leading-relaxed line-clamp-2">{article.excerpt}</p>
-
-              <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> {article.readTime}
-                </span>
-                <span>{article.date}</span>
-              </div>
-
-              <div className="mt-2 flex flex-wrap gap-1">
-                {article.tags.slice(0, 2).map((tag) => (
-                  <span key={tag} className="flex items-center gap-0.5 text-[9px] text-gray-400">
-                    <Tag className="h-2.5 w-2.5" /> {tag}
-                  </span>
-                ))}
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {/* Load more */}
-        <div className="mt-10 text-center">
-          <button className="btn-secondary">Load More Articles</button>
-        </div>
-      </div>
+        ) : (
+          <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-dashed border-gray-200">
+            <div className="h-16 w-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Search className="h-8 w-8 text-gray-300" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">No articles found</h3>
+            <p className="text-gray-500 mt-2">Try adjusting your filters or search terms.</p>
+          </div>
+        )}
+      </section>
     </div>
+  );
+}
+
+function ArticleCard({ article, index }: { article: any, index: number }) {
+  return (
+    <Link href={`/knowledge-hub/${article.slug.toLowerCase().trim()}`} className="group h-full">
+      <article className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col h-full border border-gray-100 hover:-translate-y-2">
+        {/* Image Proxy */}
+        <div className="relative h-56 w-full overflow-hidden">
+          <img 
+            src={article.imageUrl || "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&q=80&w=800"} 
+            alt={article.title}
+            className="group-hover:scale-110 transition-transform duration-700 h-full w-full object-cover"
+          />
+          <div className="absolute top-4 left-4">
+            <span className="px-3 py-1 rounded-lg bg-white/90 backdrop-blur-sm text-brand-700 text-[10px] font-black uppercase tracking-widest shadow-sm">
+              {article.category.replace('_', ' ')}
+            </span>
+          </div>
+        </div>
+
+        <div className="p-6 flex flex-col flex-1">
+          <div className="flex items-center justify-between text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-4">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-3 w-3" /> {format(new Date(article.publishedAt), "MMM dd, yyyy")}
+            </div>
+            <div className="flex items-center gap-2">
+              <User className="h-3 w-3" /> By {article.authorName.split(',')[0]}
+            </div>
+          </div>
+          
+          <h2 className="text-xl font-bold font-display text-gray-900 group-hover:text-brand-600 transition-colors mb-3 line-clamp-2">
+            {article.title}
+          </h2>
+          
+          <p className="text-gray-500 text-sm leading-relaxed mb-6 line-clamp-3">
+            {article.excerpt}
+          </p>
+
+          <div className="mt-auto flex items-center justify-between pt-6 border-t border-gray-50">
+             <div className="flex items-center gap-1.5 text-brand-600 text-xs font-black uppercase tracking-tighter group-hover:translate-x-1 transition-transform">
+               Read Article <ArrowRight className="h-3.5 w-3.5" />
+             </div>
+             <div className="text-[10px] text-gray-300 font-bold uppercase italic">
+               5 min read
+             </div>
+          </div>
+        </div>
+      </article>
+    </Link>
   );
 }
