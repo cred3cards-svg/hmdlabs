@@ -67,6 +67,58 @@ export const options: NextAdminOptions = {
         search: ["orderNumber"],
       },
     },
+    FranchiseLead: {
+      title: "Franchise Leads",
+      icon: "UserGroupIcon",
+      list: {
+        display: ["applicantName", "phone", "preferredDistrict", "status", "score", "createdAt"],
+        search: ["applicantName", "phone", "email"],
+        filters: [
+          {
+            name: "status",
+            title: "Status",
+          },
+          {
+            name: "score",
+            title: "Priority",
+          },
+          {
+            name: "preferredDistrict",
+            title: "District",
+          }
+        ],
+      },
+      edit: {
+        display: [
+          "applicantName",
+          "phone",
+          "email",
+          "status",
+          "score",
+          "franchiseType",
+          "preferredDistrict",
+          "preferredCity",
+          "notes",
+          "internalNotes",
+          "lastContactedAt",
+          "nextFollowUpAt",
+          "leadScore",
+          "source"
+        ],
+        styles: {
+          _form: "grid grid-cols-2 gap-4",
+          notes: "col-span-2",
+          internalNotes: "col-span-2",
+        }
+      },
+    },
+    FranchiseActivity: {
+      title: "Lead Activities",
+      list: {
+        display: ["type", "description", "staffName", "outcome", "createdAt"],
+        search: ["description", "staffName"],
+      },
+    },
     Testimonial: {
       title: "Testimonials",
       list: {
