@@ -4,6 +4,8 @@ import FranchiseTypes from "@/components/modules/franchise/FranchiseTypes";
 import FranchiseApplicationForm from "@/components/modules/franchise/FranchiseApplicationForm";
 import FranchiseBrochureGate from "@/components/modules/franchise/FranchiseBrochureGate";
 import FranchiseProcess from "@/components/modules/franchise/FranchiseProcess";
+import FranchiseTestimonials from "@/components/modules/franchise/FranchiseTestimonials";
+import StickyWhatsApp from "@/components/modules/franchise/StickyWhatsApp";
 
 export const metadata: Metadata = {
   title: "Franchise Opportunity – Own a Diagnostic Lab in West Bengal | HMD Labs",
@@ -25,7 +27,9 @@ export default function PartnerWithUsPage() {
       <FranchiseTypes />
       <FranchiseProcess />
       <FranchiseBrochureGate />
+      <FranchiseTestimonials />
       <FranchiseApplicationForm />
+      <StickyWhatsApp />
     </div>
   );
 }
