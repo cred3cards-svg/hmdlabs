@@ -76,15 +76,15 @@ export const options: NextAdminOptions = {
         filters: [
           {
             name: "status",
-            title: "Status",
+            label: "Status",
           },
           {
             name: "score",
-            title: "Priority",
+            label: "Priority",
           },
           {
             name: "preferredDistrict",
-            title: "District",
+            label: "District",
           }
         ],
       },
