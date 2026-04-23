@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { calculateFranchiseLeadScore, getLeadScoreLabel } from "@/lib/utils";
+import { prisma } from "@/lib/prisma";
+import { WBDistrict, FranchiseType } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,32 +23,47 @@ export async function POST(req: NextRequest) {
     }
 
     // Calculate lead score based on the new partnerType mapping
-    // We can just use a default or map it.
-    let scoreLabel = "WARM";
+    let scoreLabel: "HOT" | "WARM" | "COLD" = "WARM";
     let numericScore = 50;
+    
+    // Map PartnerType to FranchiseType Enum
+    let mappedFranchiseType: FranchiseType = "COLLECTION_CENTER";
 
-    if (partnerType === "Hospital" || partnerType === "Lab") {
+    if (partnerType === "Hospital") {
       scoreLabel = "HOT";
       numericScore = 80;
+      mappedFranchiseType = "FULL_LAB";
+    } else if (partnerType === "Lab") {
+      scoreLabel = "HOT";
+      numericScore = 80;
+      mappedFranchiseType = "FULL_LAB";
+    } else if (partnerType === "Doctor") {
+      scoreLabel = "WARM";
+      numericScore = 65;
+      mappedFranchiseType = "MINI_LAB";
     }
 
-    // TODO: Insert into DB with Prisma:
-    // const lead = await prisma.franchiseLead.create({
-    //   data: {
-    //     applicantName, phone, 
-    //     email: "no-email@provided.com", // dummy if required
-    //     franchiseType: "COLLECTION_CENTER", // dummy if required
-    //     preferredDistrict: district,
-    //     preferredCity: district,
-    //     status: "NEW",
-    //     score: scoreLabel,
-    //     leadScore: numericScore,
-    //     source,
-    //     notes: `Partner Type: ${partnerType}`,
-    //     termsAccepted: true,
-    //     termsAcceptedAt: new Date(),
-    //   },
-    // });
+    // Convert string "North 24 Parganas" to "NORTH_24_PARGANAS"
+    const enumDistrict = district.toUpperCase().replace(/\s+/g, "_") as WBDistrict;
+
+    // Insert into DB with Prisma
+    const lead = await prisma.franchiseLead.create({
+      data: {
+        applicantName,
+        phone, 
+        email: "no-email@provided.com", // dummy email as schema requires it
+        franchiseType: mappedFranchiseType, 
+        preferredDistrict: enumDistrict,
+        preferredCity: district, // store raw district as city since we only have 1 location field now
+        status: "NEW",
+        score: scoreLabel,
+        leadScore: numericScore,
+        source,
+        notes: `Partner Type selected: ${partnerType}`,
+        termsAccepted: true, // implicit for micro-form
+        termsAcceptedAt: new Date(),
+      },
+    });
 
     // TODO: Trigger CRM notification (email/Slack/webhook)
     // TODO: Send acknowledgment SMS to applicant
