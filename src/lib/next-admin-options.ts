@@ -73,20 +73,7 @@ export const options: NextAdminOptions = {
       list: {
         display: ["applicantName", "phone", "preferredDistrict", "status", "score", "createdAt"],
         search: ["applicantName", "phone", "email"],
-        filters: [
-          {
-            name: "status",
-            label: "Status",
-          },
-          {
-            name: "score",
-            label: "Priority",
-          },
-          {
-            name: "preferredDistrict",
-            label: "District",
-          }
-        ],
+        filters: ["status", "score", "preferredDistrict"],
       },
       edit: {
         display: [
