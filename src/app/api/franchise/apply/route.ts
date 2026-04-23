@@ -8,62 +8,42 @@ export async function POST(req: NextRequest) {
     const {
       applicantName,
       phone,
-      email,
-      franchiseType,
-      preferredDistrict,
-      preferredCity,
-      investmentCapacity,
-      existingSpace,
-      spaceArea,
-      businessExperience,
-      currentOccupation,
-      addressLine1,
-      city,
       district,
-      pincode,
-      termsAccepted,
+      partnerType,
       source = "website",
     } = body;
 
     // Validation
-    if (!applicantName || !phone || !email || !franchiseType || !preferredDistrict) {
+    if (!applicantName || !phone || !district || !partnerType) {
       return NextResponse.json(
-        { message: "Required fields missing: name, phone, email, franchise type, district" },
+        { message: "Required fields missing: name, phone, district, partner type" },
         { status: 400 }
       );
     }
 
-    if (!termsAccepted) {
-      return NextResponse.json(
-        { message: "Terms and conditions must be accepted" },
-        { status: 400 }
-      );
-    }
+    // Calculate lead score based on the new partnerType mapping
+    // We can just use a default or map it.
+    let scoreLabel = "WARM";
+    let numericScore = 50;
 
-    // Calculate lead score
-    const numericScore = calculateFranchiseLeadScore({
-      investmentCapacity: Number(investmentCapacity) || 0,
-      existingSpace: Boolean(existingSpace),
-      businessExperience: Number(businessExperience) || 0,
-      franchiseType,
-    });
-    const scoreLabel = getLeadScoreLabel(numericScore);
+    if (partnerType === "Hospital" || partnerType === "Lab") {
+      scoreLabel = "HOT";
+      numericScore = 80;
+    }
 
     // TODO: Insert into DB with Prisma:
     // const lead = await prisma.franchiseLead.create({
     //   data: {
-    //     applicantName, phone, email, franchiseType,
-    //     preferredDistrict, preferredCity: preferredCity || city,
-    //     investmentCapacity: investmentCapacity ? Number(investmentCapacity) : null,
-    //     existingSpace: Boolean(existingSpace),
-    //     spaceArea: spaceArea ? Number(spaceArea) : null,
-    //     businessExperience: businessExperience ? Number(businessExperience) : null,
-    //     currentOccupation,
-    //     addressLine1, city, district, pincode,
+    //     applicantName, phone, 
+    //     email: "no-email@provided.com", // dummy if required
+    //     franchiseType: "COLLECTION_CENTER", // dummy if required
+    //     preferredDistrict: district,
+    //     preferredCity: district,
     //     status: "NEW",
     //     score: scoreLabel,
     //     leadScore: numericScore,
     //     source,
+    //     notes: `Partner Type: ${partnerType}`,
     //     termsAccepted: true,
     //     termsAcceptedAt: new Date(),
     //   },
