@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { UTApi } from "uploadthing/server";
+import { sendServerEvent } from "@/lib/meta-capi";
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const files = formData.getAll("files") as File[];
     const phone = formData.get("phone") as string;
+    const eventId = formData.get("eventId") as string;
 
     if (!files || files.length === 0) {
       return NextResponse.json({ message: "No files uploaded" }, { status: 400 });
@@ -50,6 +52,23 @@ export async function POST(req: NextRequest) {
     }
 
     const prescriptionId = `HMD-RX-${Date.now().toString(36).toUpperCase()}`;
+
+    // Fire server-side Lead event for deduplication
+    if (eventId) {
+      sendServerEvent(
+        "Lead",
+        eventId,
+        req.headers.get("referer") || req.url,
+        {
+          ph: [phone],
+          client_ip_address: req.headers.get("x-forwarded-for") || undefined,
+          client_user_agent: req.headers.get("user-agent") || undefined,
+        },
+        {
+          content_name: "Prescription Upload",
+        }
+      );
+    }
 
     return NextResponse.json({
       success: true,

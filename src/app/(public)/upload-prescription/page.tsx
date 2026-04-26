@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { Upload, FileText, CheckCircle2, X, Camera } from "lucide-react";
 import toast from "react-hot-toast";
+import { event as fbEvent } from "@/components/analytics/MetaPixel";
 
 export default function UploadPrescriptionPage() {
   const [files, setFiles] = useState<File[]>([]);
@@ -30,9 +31,16 @@ export default function UploadPrescriptionPage() {
     if (files.length === 0) { toast.error("Please upload at least one prescription"); return; }
     if (!/^[6-9]\d{9}$/.test(phone)) { toast.error("Enter valid 10-digit mobile number"); return; }
 
+    const eventId = `evt_rx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const formData = new FormData();
     files.forEach((f) => formData.append("files", f));
     formData.append("phone", phone);
+    formData.append("eventId", eventId);
+
+    // Fire Client-Side Pixel Event with Deduplication ID
+    fbEvent("Lead", {
+      content_name: "Prescription Upload",
+    }, eventId);
 
     try {
       const res = await fetch("/api/prescriptions/upload", { method: "POST", body: formData });

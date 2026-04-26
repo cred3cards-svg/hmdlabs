@@ -19,6 +19,7 @@ import {
 import toast from "react-hot-toast";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
+import { event as fbEvent } from "@/components/analytics/MetaPixel";
 
 const STEPS = [
   { id: 1, name: "Patient Info", icon: User },
@@ -128,6 +129,8 @@ function BookingForm() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      const eventId = `evt_purchase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       const payload = {
         ...formData,
         testId: testSlug ? data?.id : null,
@@ -137,7 +140,15 @@ function BookingForm() {
         subtotal: data?.discountedPrice || 0,
         totalAmount: data?.discountedPrice || 0,
         homeFee: 0,
+        eventId,
       };
+
+      // Fire Client-Side Pixel Event with Deduplication ID
+      fbEvent("Purchase", {
+        value: payload.totalAmount,
+        currency: "INR",
+        content_name: payload.testName || payload.packageName || "Diagnostic Test/Package",
+      }, eventId);
 
       const res = await fetch("/api/orders/create", {
         method: "POST",

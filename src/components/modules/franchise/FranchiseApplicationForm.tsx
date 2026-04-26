@@ -7,6 +7,7 @@ import { z } from "zod";
 import { CheckCircle2, Send } from "lucide-react";
 import { WB_DISTRICTS } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { event as fbEvent } from "@/components/analytics/MetaPixel";
 
 const formSchema = z.object({
   applicantName: z.string().min(3, "Full name required"),
@@ -30,10 +31,23 @@ export default function FranchiseApplicationForm() {
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
+      const eventId = `evt_lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const payload = {
+        ...data,
+        eventId,
+      };
+
+      // Fire Client-Side Pixel Event with Deduplication ID
+      fbEvent("Lead", {
+        content_name: "Franchise Application",
+        content_category: data.partnerType,
+      }, eventId);
+
       const res = await fetch("/api/franchise/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         setSubmitted(true);

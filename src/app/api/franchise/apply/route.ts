@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { WBDistrict, FranchiseType } from "@prisma/client";
+import { sendServerEvent } from "@/lib/meta-capi";
 
 export async function POST(req: NextRequest) {
   try {
@@ -64,6 +65,27 @@ export async function POST(req: NextRequest) {
         termsAcceptedAt: new Date(),
       },
     });
+
+    // Fire server-side Lead event for deduplication
+    if (body.eventId) {
+      // We do not await this to avoid slowing down the response
+      sendServerEvent(
+        "Lead",
+        body.eventId,
+        req.headers.get("referer") || req.url,
+        {
+          ph: [phone],
+          fn: [applicantName],
+          ct: [district],
+          client_ip_address: req.headers.get("x-forwarded-for") || undefined,
+          client_user_agent: req.headers.get("user-agent") || undefined,
+        },
+        {
+          content_name: "Franchise Application",
+          content_category: partnerType,
+        }
+      );
+    }
 
     // TODO: Trigger CRM notification (email/Slack/webhook)
     // TODO: Send acknowledgment SMS to applicant

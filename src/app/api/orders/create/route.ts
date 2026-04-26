@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { OrderStatus, PaymentStatus, PaymentMethod, WBDistrict } from "@prisma/client";
+import { sendServerEvent } from "@/lib/meta-capi";
 
 export async function POST(req: NextRequest) {
   try {
@@ -88,6 +89,31 @@ export async function POST(req: NextRequest) {
           items: true
         }
       });
+
+      // Fire server-side Purchase event for deduplication
+      if (body.eventId) {
+        // We do not await this to avoid slowing down the response
+        sendServerEvent(
+          "Purchase",
+          body.eventId,
+          req.headers.get("referer") || req.url,
+          {
+            ph: [phone],
+            fn: [name],
+            em: email ? [email] : [],
+            ct: [finalCity],
+            zp: [pincode ? String(pincode) : ""],
+            client_ip_address: req.headers.get("x-forwarded-for") || undefined,
+            client_user_agent: req.headers.get("user-agent") || undefined,
+          },
+          {
+            value: Number(totalAmount) || 0,
+            currency: "INR",
+            content_name: body.testName || body.packageName || "Diagnostic Test/Package",
+            content_ids: [testId || packageId].filter(Boolean) as string[],
+          }
+        );
+      }
 
       return NextResponse.json({
         success: true,
