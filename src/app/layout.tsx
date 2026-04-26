@@ -82,6 +82,7 @@ export const metadata: Metadata = {
   },
 };
 
+import { Suspense } from "react";
 import MetaPixel from "@/components/analytics/MetaPixel";
 
 export default function RootLayout({
@@ -92,7 +93,9 @@ export default function RootLayout({
   return (
     <html lang="en-IN" className={`${sora.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-screen bg-white antialiased">
-        <MetaPixel />
+        <Suspense fallback={null}>
+          <MetaPixel />
+        </Suspense>
         {children}
         <Toaster
           position="top-center"
